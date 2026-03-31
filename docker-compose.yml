@@ -1,0 +1,23 @@
+name: tcc
+
+services:
+  database:
+    # Pin a tag from https://hub.docker.com/r/bitnami/postgresql/tags if you need a fixed PG version.
+    image: docker.io/bitnami/postgresql:latest
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRESQL_USERNAME: schulzdimitrii
+      POSTGRESQL_PASSWORD: password
+      POSTGRESQL_DATABASE: tcc
+    volumes:
+      - postgres_data:/bitnami/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U schulzdimitrii -d tcc"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
