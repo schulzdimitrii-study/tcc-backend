@@ -45,7 +45,7 @@ jobs:
   # Run Unit Tests
   # ──────────────────────────────────────────
   tests:
-    name: Unit Tests
+    name: Tests
     needs: build
     runs-on: ubuntu-latest
 
