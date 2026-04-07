@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>TCC — Teste WebSocket STOMP</title>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; padding: 24px; }
+    h1 { font-size: 1.3rem; color: #a78bfa; margin-bottom: 20px; }
+
+    .card {
+      background: #1a1d2e;
+      border: 1px solid #2d3045;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card h2 { font-size: 0.8rem; color: #6b7280; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+    .field label { font-size: 0.75rem; color: #9ca3af; }
+    .field input {
+      background: #0f1117;
+      border: 1px solid #2d3045;
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #e0e0e0;
+      font-size: 0.875rem;
+      width: 100%;
+    }
+    .field input:focus { outline: none; border-color: #7c3aed; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    button {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 7px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-connect    { background: #7c3aed; color: #fff; }
+    .btn-disconnect { background: #374151; color: #fff; }
+    .btn-subscribe  { background: #0e7490; color: #fff; }
+    .btn-send       { background: #059669; color: #fff; }
+    .btn-clear      { background: #374151; color: #9ca3af; font-size: 0.75rem; padding: 6px 12px; }
+
+    #status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 12px;
+      background: #374151;
+      color: #9ca3af;
+    }
+    #status.connected    { background: #064e3b; color: #34d399; }
+    #status.subscribed   { background: #1e3a5f; color: #60a5fa; }
+    #status.disconnected { background: #374151; color: #9ca3af; }
+
+    #output {
+      background: #0a0c14;
+      border: 1px solid #2d3045;
+      border-radius: 8px;
+      padding: 14px;
+      height: 320px;
+      overflow-y: auto;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+    .log-info  { color: #6b7280; }
+    .log-ok    { color: #34d399; }
+    .log-msg   { color: #60a5fa; }
+    .log-send  { color: #fbbf24; }
+    .log-error { color: #f87171; }
+    .log-time  { color: #4b5563; margin-right: 8px; }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .output-header span { font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.08em; }
+  </style>
+</head>
+<body>
+
+<h1>🏃 TCC — Teste WebSocket STOMP</h1>
+
+<!-- Conexão -->
+<div class="card">
+  <h2>Conexão <span id="status" class="disconnected">Desconectado</span></h2>
+  <div class="row">
+    <div class="field" style="flex:2">
+      <label>URL do servidor</label>
+      <input id="serverUrl" value="ws://localhost:8080/ws" />
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-connect"    id="btnConnect"    onclick="connect()">🔌 Conectar</button>
+    <button class="btn-disconnect" id="btnDisconnect" onclick="disconnect()" disabled>⏏ Desconectar</button>
+  </div>
+</div>
+
+<!-- Sessão -->
+<div class="card">
+  <h2>Sessão</h2>
+  <div class="row">
+    <div class="field" style="flex:3">
+      <label>Session ID</label>
+      <input id="sessionId" placeholder="Cole o sessionId do POST /sessions/iniciar" />
+    </div>
+    <div class="field" style="flex:3">
+      <label>User ID</label>
+      <input id="userId" placeholder="Cole o userId do POST /auth/login" />
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-subscribe" id="btnSubscribe" onclick="subscribe()" disabled>📡 Subscrever no Leaderboard</button>
+  </div>
+</div>
+
+<!-- Biometria -->
+<div class="card">
+  <h2>Biometria</h2>
+  <div class="row">
+    <div class="field">
+      <label>BPM</label>
+      <input id="bpm" type="number" value="152" />
+    </div>
+    <div class="field">
+      <label>Velocidade (km/h)</label>
+      <input id="speed" type="number" value="9.5" step="0.1" />
+    </div>
+    <div class="field">
+      <label>Pace (min/km)</label>
+      <input id="pace" type="number" value="6.3" step="0.1" />
+    </div>
+    <div class="field">
+      <label>Distância acumulada (km)</label>
+      <input id="distance" type="number" value="2.1" step="0.1" />
+    </div>
+    <div class="field">
+      <label>Cadência (ppm)</label>
+      <input id="cadence" type="number" value="85" step="0.5" />
+    </div>
+    <div class="field">
+      <label>Calorias acumuladas</label>
+      <input id="calories" type="number" value="180" />
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-send" id="btnSend" onclick="sendBiometrics()" disabled>🚀 Enviar Biometria</button>
+  </div>
+</div>
+
+<!-- Output -->
+<div class="card">
+  <div class="output-header">
+    <span>Output</span>
+    <button class="btn-clear" onclick="clearLog()">🗑 Limpar</button>
+  </div>
+  <div id="output"></div>
+</div>
+
+<script>
+  let stompClient = null;
+  let subscription = null;
+
+  function now() {
+    return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function log(msg, type = 'info') {
+    const out = document.getElementById('output');
+    const line = document.createElement('div');
+    line.innerHTML = `<span class="log-time">${now()}</span><span class="log-${type}">${msg}</span>`;
+    out.appendChild(line);
+    out.scrollTop = out.scrollHeight;
+  }
+
+  function clearLog() {
+    document.getElementById('output').innerHTML = '';
+  }
+
+  function setStatus(text, cls) {
+    const el = document.getElementById('status');
+    el.textContent = text;
+    el.className = cls;
+  }
+
+  function connect() {
+    const url = document.getElementById('serverUrl').value.trim();
+    if (!url) { log('❌ Informe a URL do servidor.', 'error'); return; }
+
+    log(`Conectando em ${url}…`, 'info');
+
+    stompClient = new StompJs.Client({
+      brokerURL: url,
+      reconnectDelay: 0,
+      onConnect: () => {
+        log('✅ CONNECTED — handshake STOMP concluído', 'ok');
+        setStatus('Conectado', 'connected');
+        document.getElementById('btnConnect').disabled    = true;
+        document.getElementById('btnDisconnect').disabled = false;
+        document.getElementById('btnSubscribe').disabled  = false;
+        document.getElementById('btnSend').disabled       = false;
+      },
+      onDisconnect: () => {
+        log('⏏ Desconectado.', 'info');
+        setStatus('Desconectado', 'disconnected');
+        document.getElementById('btnConnect').disabled    = false;
+        document.getElementById('btnDisconnect').disabled = true;
+        document.getElementById('btnSubscribe').disabled  = true;
+        document.getElementById('btnSend').disabled       = true;
+      },
+      onStompError: (frame) => {
+        log(`❌ Erro STOMP: ${frame.headers['message']}`, 'error');
+      },
+      onWebSocketError: (evt) => {
+        log(`❌ Erro WebSocket: ${evt.type}`, 'error');
+        setStatus('Erro', 'disconnected');
+      }
+    });
+
+    stompClient.activate();
+  }
+
+  function disconnect() {
+    if (stompClient) {
+      stompClient.deactivate();
+      stompClient = null;
+      subscription = null;
+    }
+  }
+
+  function subscribe() {
+    const sessionId = document.getElementById('sessionId').value.trim();
+    if (!sessionId) { log('❌ Informe o Session ID antes de subscrever.', 'error'); return; }
+    if (!stompClient || !stompClient.connected) { log('❌ Não conectado.', 'error'); return; }
+
+    if (subscription) {
+      subscription.unsubscribe();
+      log('📡 Subscrição anterior removida.', 'info');
+    }
+
+    const dest = `/topic/session/${sessionId}/leaderboard`;
+    subscription = stompClient.subscribe(dest, (message) => {
+      try {
+        const data = JSON.parse(message.body);
+        log(`📨 Leaderboard recebido:`, 'msg');
+        log(`   Rank do usuário: #${data.userRank}`, 'msg');
+        if (data.hordeVirtualDistanceKm !== null && data.hordeVirtualDistanceKm !== undefined) {
+          log(`   Horda virtual: ${data.hordeVirtualDistanceKm.toFixed(3)} km`, 'msg');
+        }
+        data.entries.forEach(e => {
+          log(`   #${e.rank} userId=${e.userId.substring(0,8)}… → ${e.distanceKm} km`, 'msg');
+        });
+      } catch {
+        log(`📨 Mensagem raw: ${message.body}`, 'msg');
+      }
+    });
+
+    log(`✅ Subscrito em ${dest}`, 'ok');
+    setStatus('Subscrito', 'subscribed');
+  }
+
+  function sendBiometrics() {
+    const sessionId = document.getElementById('sessionId').value.trim();
+    const userId    = document.getElementById('userId').value.trim();
+
+    if (!sessionId || !userId) { log('❌ Informe Session ID e User ID.', 'error'); return; }
+    if (!stompClient || !stompClient.connected) { log('❌ Não conectado.', 'error'); return; }
+
+    const payload = {
+      sessionId,
+      userId,
+      timestamp:           Date.now(),
+      bpm:                 Number(document.getElementById('bpm').value),
+      speed:               Number(document.getElementById('speed').value),
+      pace:                Number(document.getElementById('pace').value),
+      accumulatedDistance: Number(document.getElementById('distance').value),
+      cadence:             Number(document.getElementById('cadence').value),
+      accumulatedCalories: Number(document.getElementById('calories').value)
+    };
+
+    stompClient.publish({
+      destination: '/app/treino/dados',
+      body: JSON.stringify(payload)
+    });
+
+    log(`📤 Biometria enviada → bpm=${payload.bpm} dist=${payload.accumulatedDistance}km`, 'send');
+  }
+</script>
+</body>
+</html>
