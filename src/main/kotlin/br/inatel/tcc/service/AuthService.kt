@@ -35,7 +35,7 @@ class AuthService(
         userRepository.save(user)
         val token = jwtService.generateToken(user)
 
-        return AuthResponse(token = token, name = user.name, email = user.email)
+        return AuthResponse(token = token, userId = user.id.toString(), name = user.name, email = user.email)
     }
 
     fun login(request: LoginRequest): AuthResponse {
@@ -47,6 +47,6 @@ class AuthService(
         }
 
         val token = jwtService.generateToken(user)
-        return AuthResponse(token = token, name = user.name, email = user.email)
+        return AuthResponse(token = token, userId = user.id.toString(), name = user.name, email = user.email)
     }
 }
