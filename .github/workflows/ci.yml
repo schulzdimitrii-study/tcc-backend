@@ -1,5 +1,5 @@
 # Pipeline CI/CD
-# Etapas: Build → Test → Code Coverage → Deploy
+# Etapas: Build → Test → Code Coverage → Notification → Deploy
 
 name: CI
 
@@ -27,18 +27,35 @@ jobs:
           POSTGRES_PASSWORD: test
         ports:
           - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Java
+
+      - name: Setup JDK 25
         uses: actions/setup-java@v4
         with:
           java-version: '25'
           distribution: 'temurin'
+          cache: 'maven'
 
       - name: Build project
-        run: ./mvnw clean install
-  
+        run: ./mvnw clean install -DskipTests
+
 
   # ──────────────────────────────────────────
   # STEP 2: TESTS
@@ -58,6 +75,21 @@ jobs:
           POSTGRES_PASSWORD: test
         ports:
           - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -70,17 +102,42 @@ jobs:
           cache: 'maven'
 
       - name: Run tests
-        run: mvn clean test
+        run: ./mvnw clean test
 
 
   # ──────────────────────────────────────────
   # STEP 3: CODE COVERAGE
-  # Code Coverage Analysis
+  # Code Coverage Analysis with JaCoCo
   # ──────────────────────────────────────────
   coverage:
     name: Code Coverage
     needs: build
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: tcc_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +150,7 @@ jobs:
           cache: 'maven'
 
       - name: Run tests with JaCoCo
-        run: mvn clean verify
+        run: ./mvnw clean verify
 
       - name: Upload JaCoCo HTML report
         uses: actions/upload-artifact@v4
@@ -105,31 +162,67 @@ jobs:
 
   # ──────────────────────────────────────────
   # STEP 4: NOTIFICATION
-  # Execute a script to send a notification to WhatsApp
+  # Send email notification on success or failure
+  # Required secrets:
+  #   MAIL_SERVER        → SMTP server (e.g. smtp.gmail.com)
+  #   MAIL_USERNAME      → Sender email address
+  #   MAIL_PASSWORD      → App password (not account password)
+  #   NOTIFICATION_RECIPIENTS → Comma-separated recipient emails
   # ──────────────────────────────────────────
   notification:
     name: Notification
-    needs: coverage
+    needs: [tests, coverage]
     runs-on: ubuntu-latest
+    if: always()
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup JDK 25
-        uses: actions/setup-java@v4
+      - name: Send success email
+        if: needs.tests.result == 'success' && needs.coverage.result == 'success'
+        uses: dawidd6/action-send-mail@v3
         with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: 'maven'
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ CI Passed — ${{ github.repository }} (${{ github.ref_name }})"
+          to: ${{ secrets.NOTIFICATION_RECIPIENTS }}
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            ✅ CI pipeline completed successfully!
 
-      - name: Install mailutils
-        run: sudo apt-get update && sudo apt-get install -y mailutils
+            Repository : ${{ github.repository }}
+            Branch     : ${{ github.ref_name }}
+            Commit     : ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
 
-      - name: Notification Script (Shell)
-        env:
-          NOTIFICATION_RECIPIENTS: ${{ secrets.NOTIFICATION_RECIPIENTS }}
-        run: sh src/ci_notification.sh
-        
+            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send failure email
+        if: needs.tests.result == 'failure' || needs.coverage.result == 'failure'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ CI Failed — ${{ github.repository }} (${{ github.ref_name }})"
+          to: ${{ secrets.NOTIFICATION_RECIPIENTS }}
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            ❌ CI pipeline failed!
+
+            Repository : ${{ github.repository }}
+            Branch     : ${{ github.ref_name }}
+            Commit     : ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+
+            Tests    : ${{ needs.tests.result }}
+            Coverage : ${{ needs.coverage.result }}
+
+            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
 
   # ──────────────────────────────────────────
   # STEP 5: DEPLOY
@@ -137,12 +230,12 @@ jobs:
   # ──────────────────────────────────────────
   deploy:
     name: Deploy
-    needs: [ tests, coverage ]
+    needs: [tests, coverage]
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup JDK 25
         uses: actions/setup-java@v4
         with:
