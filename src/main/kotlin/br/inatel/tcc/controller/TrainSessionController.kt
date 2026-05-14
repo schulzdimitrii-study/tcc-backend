@@ -1,11 +1,14 @@
 package br.inatel.tcc.controller
 
+import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
+import br.inatel.tcc.model.TrainSession
 import br.inatel.tcc.service.TrainSessionService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
