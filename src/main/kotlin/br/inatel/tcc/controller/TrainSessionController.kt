@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 class TrainSessionController(
     private val trainSessionService: TrainSessionService
 ) {
-    @PostMapping("/iniciar")
+    @PostMapping("/start")
     fun startSession(
         @RequestBody request: StartSessionRequest,
         authentication: Authentication
@@ -26,7 +26,7 @@ class TrainSessionController(
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
-    @PostMapping("/{sessionId}/encerrar")
+    @PostMapping("/{sessionId}/finish")
     fun endSession(
         @PathVariable sessionId: String,
         authentication: Authentication
