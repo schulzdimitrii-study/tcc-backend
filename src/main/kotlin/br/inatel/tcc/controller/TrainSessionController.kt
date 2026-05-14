@@ -3,7 +3,7 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
-import br.inatel.tcc.model.TrainSession
+import br.inatel.tcc.domain.trainsession.TrainSession
 import br.inatel.tcc.service.TrainSessionService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
