@@ -7,6 +7,7 @@ import br.inatel.tcc.domain.trainsession.TrainSessionRepository
 import br.inatel.tcc.domain.trainsession.TrainType
 import br.inatel.tcc.domain.horde.HordeRepository
 import br.inatel.tcc.domain.user.UserRepository
+import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
 import br.inatel.tcc.service.redis.LeaderboardRedisService
@@ -53,7 +54,6 @@ class TrainSessionService(
         val user = userRepository.findByEmail(userEmail)
             .orElseThrow { IllegalArgumentException("Usuário não encontrado: $userEmail") }
 
-        // Busca a Horda no PostgreSQL apenas uma vez — o targetPace é cacheado no Redis
         val horde = request.hordeId?.let {
             hordeRepository.findById(it)
                 .orElseThrow { IllegalArgumentException("Horda não encontrada: $it") }
@@ -73,7 +73,6 @@ class TrainSessionService(
 
         val sessionId = session.id.toString()
 
-        // Inicializa Redis: grava start time + horde pace (evita query ao PostgreSQL durante a corrida)
         leaderboardRedisService.initSession(sessionId, horde?.targetPace)
 
         return StartSessionResponse(sessionId = sessionId)
@@ -85,13 +84,9 @@ class TrainSessionService(
         val session = trainSessionRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Sessão não encontrada: $sessionId") }
 
-        // Lê o ranking final do Redis antes de expirar os keys
         val finalLeaderboard = leaderboardRedisService.getFullLeaderboard(sessionId)
-
-        // Período no formato yyyy-MM para agrupamento no ranking mensal
         val period = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
 
-        // Persiste cada posição do ranking no PostgreSQL
         finalLeaderboard?.forEachIndexed { index, entry ->
             val userId = UUID.fromString(entry.value ?: return@forEachIndexed)
             val distanceKm = entry.score ?: 0.0
@@ -108,7 +103,6 @@ class TrainSessionService(
             )
         }
 
-        // Atualiza a sessão com endDate e distância total do próprio usuário dono da sessão
         val ownerDistance = finalLeaderboard
             ?.firstOrNull { it.value == session.user.id.toString() }
             ?.score
@@ -127,7 +121,23 @@ class TrainSessionService(
             )
         )
 
-        // Reduz TTL dos keys Redis para 1h (dados ainda acessíveis brevemente pós-corrida)
         leaderboardRedisService.expireSessionKeys(sessionId)
+    }
+
+    fun getLeaderboard(sessionId: String): List<LeaderboardEntryDto> {
+        val entries = leaderboardRedisService.getTopEntries(sessionId) ?: return emptyList()
+        return entries.mapIndexed { index, tuple ->
+            LeaderboardEntryDto(
+                userId = tuple.value ?: "",
+                rank = index + 1,
+                distanceKm = tuple.score ?: 0.0
+            )
+        }
+    }
+
+    fun getSession(sessionId: String): TrainSession {
+        val id = UUID.fromString(sessionId)
+        return trainSessionRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Sessão não encontrada: $sessionId") }
     }
 }
