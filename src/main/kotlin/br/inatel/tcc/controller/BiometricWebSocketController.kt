@@ -40,22 +40,14 @@ class BiometricWebSocketController(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @MessageMapping("/treino/dados")
+    @MessageMapping("/train/data")
     fun receiveBiometricData(message: BiometricDataMessage) {
         val start = System.currentTimeMillis()
 
-        // 1. Salva estado biométrico atual do usuário no Redis HASH (HMSET)
-        //    Key: session:{sessionId}:user:{userId}
         sessionRedisService.saveUserState(message.sessionId, message.userId, message)
-
-        // 2. Atualiza distância do usuário no leaderboard ZSET (ZADD)
-        //    O score (distância) é sempre substituído, não acumulado — ZADD é idempotente
         leaderboardRedisService.updateUserDistance(message.sessionId, message.userId, message.accumulatedDistance)
 
-        // 3. Busca a posição atual do usuário no ranking (ZREVRANK — 0-based → +1)
         val userRank = (leaderboardRedisService.getUserRank(message.sessionId, message.userId) ?: 0L) + 1
-
-        // 4. Busca os top-10 do leaderboard (ZREVRANGE WITHSCORES)
         val entries = leaderboardRedisService.getTopEntries(message.sessionId, 10)
             ?.mapIndexed { index, tuple ->
                 LeaderboardEntryDto(
@@ -65,18 +57,14 @@ class BiometricWebSocketController(
                 )
             } ?: emptyList()
 
-        // 5. Calcula posição virtual da Horda (cálculo local, sem I/O)
-        //    startEpoch e hordePace foram gravados no Redis ao iniciar a sessão
         val startEpoch = leaderboardRedisService.getSessionStartEpoch(message.sessionId)
         val hordePace = leaderboardRedisService.getHordePace(message.sessionId)
         val hordeVirtualDistance = if (startEpoch != null && hordePace != null && hordePace > 0) {
             hordePositionService.calculateVirtualPosition(startEpoch, hordePace)
         } else {
-            null // Sessão sem Horda (treino livre)
+            null
         }
 
-        // 6. Broadcast do leaderboard atualizado para todos os inscritos na sessão
-        //    O app React Native recebe isso e atualiza a UI da corrida em tempo real
         val response = LeaderboardResponse(
             sessionId = message.sessionId,
             userRank = userRank.toInt(),
