@@ -32,6 +32,7 @@ class User(
     override fun getAuthorities(): Collection<GrantedAuthority> =
         listOf(SimpleGrantedAuthority("ROLE_USER"))
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     override fun getPassword(): String = password
 
     override fun getUsername(): String = email
