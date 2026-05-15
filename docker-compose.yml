@@ -2,17 +2,15 @@ name: tcc
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: tcc-backend
+    image: tcc-backend:latest
     ports:
       - "8080:8080"
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/tcc
+      - REDIS_HOST=redis
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - postgres
+      - redis
 
   postgres:
     image: docker.io/bitnami/postgresql:latest
