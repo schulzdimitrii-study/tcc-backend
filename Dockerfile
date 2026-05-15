@@ -1,5 +1,5 @@
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-21 AS builder
+FROM maven:3.9-eclipse-temurin-23 AS builder
 
 WORKDIR /build
 
@@ -10,14 +10,14 @@ COPY src ./src
 RUN mvn clean package -DskipTests -B
 
 # ─── Stage 2: Extract layers (Spring Boot layertools) ─────────────────────────
-FROM eclipse-temurin:21-jre-alpine AS extractor
+FROM eclipse-temurin:23-jre-alpine AS extractor
 
 WORKDIR /extract
 COPY --from=builder /build/target/*.jar app.jar
 RUN java -Djarmode=layertools -jar app.jar extract
 
 # ─── Stage 3: Runtime ─────────────────────────────────────────────────────────
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:23-jre-alpine
 
 RUN addgroup -S app && adduser -S app -G app
 
