@@ -4,27 +4,27 @@ services:
   app:
     image: tcc-backend:latest
     ports:
-      - "8080:8080"
+      - "${APP_PORT}:${APP_PORT}"
     environment:
-      - DB_URL=jdbc:postgresql://postgres:5432/tcc
-      - REDIS_HOST=redis
+      - DB_URL=jdbc:postgresql://postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      - REDIS_HOST=${REDIS_HOST}
     depends_on:
       - postgres
       - redis
 
   postgres:
-    image: docker.io/bitnami/postgresql:latest
+    image: postgres:17
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     environment:
-      POSTGRESQL_USERNAME: schulzdimitrii
-      POSTGRESQL_PASSWORD: password
-      POSTGRESQL_DATABASE: tcc
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgres_data:/bitnami/postgresql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U schulzdimitrii -d tcc" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,7 +33,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:${REDIS_PORT}"
     volumes:
       - redis_data:/data
     healthcheck:
