@@ -1,0 +1,9 @@
+.git
+.github
+target
+*.md
+*.html
+.gitignore
+docker-compose.yml
+teste-websocket.html
+src/test
