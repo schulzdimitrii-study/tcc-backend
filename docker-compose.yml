@@ -2,6 +2,7 @@ name: tcc
 
 services:
   app:
+    build: .
     image: tcc-backend:latest
     ports:
       - "${APP_PORT}:${APP_PORT}"
