@@ -22,7 +22,7 @@ class UserService(
             name = user.name.takeIf { it.isNotBlank() } ?: existingUser.name,
             email = user.email.takeIf { it.isNotBlank() } ?: existingUser.email,
             birthdayDate = user.birthdayDate ?: existingUser.birthdayDate,
-            password = user.password ?: existingUser.password,
+            password = user.password.takeIf { it.isNotBlank() } ?: existingUser.password,
             maxHeartRate = user.maxHeartRate ?: existingUser.maxHeartRate,
             height = user.height ?: existingUser.height,
             weight = user.weight ?: existingUser.weight
