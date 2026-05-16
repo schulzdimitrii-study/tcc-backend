@@ -17,9 +17,9 @@ COPY --from=builder /build/target/*.jar app.jar
 RUN java -Djarmode=layertools -jar app.jar extract
 
 # ─── Stage 3: Runtime ─────────────────────────────────────────────────────────
-FROM eclipse-temurin:23-jre-alpine
+FROM eclipse-temurin:23-jre
 
-RUN addgroup -S app && adduser -S app -G app
+RUN groupadd -r app && useradd -r -g app app
 
 WORKDIR /app
 

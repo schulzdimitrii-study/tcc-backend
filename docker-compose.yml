@@ -7,8 +7,8 @@ services:
     ports:
       - "${APP_PORT}:${APP_PORT}"
     environment:
-      - DB_URL=jdbc:postgresql://postgres:${POSTGRES_PORT}/${POSTGRES_DB}
-      - REDIS_HOST=${REDIS_HOST}
+      - DB_URL=jdbc:postgresql://postgres:5432/tcc
+      - REDIS_HOST=redis
     depends_on:
       - postgres
       - redis
