@@ -5,6 +5,11 @@ import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
 import br.inatel.tcc.domain.trainsession.TrainSession
 import br.inatel.tcc.service.TrainSessionService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
@@ -16,10 +21,13 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
+@Tag(name = "Training Session", description = "Training Session API")
 @RequestMapping("/sessions")
 class TrainSessionController(
     private val trainSessionService: TrainSessionService
 ) {
+
+    @Operation(summary = "Start a new training session", responses = [ApiResponse(description = "Session started", content = [Content(mediaType = "application/json", schema = Schema(implementation = StartSessionResponse::class))])])
     @PostMapping("/start")
     fun startSession(
         @RequestBody request: StartSessionRequest,
@@ -29,6 +37,7 @@ class TrainSessionController(
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
+    @Operation(summary = "End a training session", responses = [ApiResponse(description = "Session ended")])
     @PostMapping("/{sessionId}/finish")
     fun endSession(
         @PathVariable sessionId: String,
@@ -38,6 +47,7 @@ class TrainSessionController(
         return ResponseEntity.noContent().build()
     }
 
+    @Operation(summary = "Get leaderboard for a training session", responses = [ApiResponse(description = "Leaderboard", content = [Content(mediaType = "application/json", schema = Schema(implementation = LeaderboardEntryDto::class))])])
     @GetMapping("/{sessionId}/leaderboard")
     fun getLeaderboard(
         @PathVariable sessionId: String,
@@ -47,6 +57,7 @@ class TrainSessionController(
         return ResponseEntity.ok(leaderboard)
     }
 
+    @Operation(summary = "Get a training session", responses = [ApiResponse(description = "Training session", content = [Content(mediaType = "application/json", schema = Schema(implementation = TrainSession::class))])])
     @GetMapping("/{sessionId}")
     fun getSession(
         @PathVariable sessionId: String,

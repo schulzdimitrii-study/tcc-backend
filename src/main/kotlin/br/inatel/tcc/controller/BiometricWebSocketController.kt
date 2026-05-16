@@ -10,6 +10,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.stereotype.Controller
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.tags.Tag
 
 /**
  * Recebe o fluxo de biometria do Galaxy Watch via WebSocket STOMP e
@@ -31,6 +36,7 @@ import org.springframework.stereotype.Controller
  *   Referência: domain/biometricdata/CardiacZone.kt
  */
 @Controller
+@Tag(name = "Biometric Data", description = "Biometric Data API")
 class BiometricWebSocketController(
     private val sessionRedisService: SessionRedisService,
     private val leaderboardRedisService: LeaderboardRedisService,
@@ -40,6 +46,7 @@ class BiometricWebSocketController(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    @Operation(summary = "Receive biometric data from a user", responses = [ApiResponse(description = "Biometric data received", content = [Content(mediaType = "application/json", schema = Schema(implementation = BiometricDataMessage::class))])])
     @MessageMapping("/train/data")
     fun receiveBiometricData(message: BiometricDataMessage) {
         val start = System.currentTimeMillis()
