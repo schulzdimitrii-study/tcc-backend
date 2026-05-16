@@ -27,8 +27,7 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/auth/**").permitAll()
-                    // Endpoint WebSocket STOMP — liberado para handshake inicial sem JWT
-                    // O Galaxy Watch conecta aqui via app companion React Native
+                    .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/ws/**").permitAll()
                     .anyRequest().authenticated()
             }
