@@ -8,8 +8,15 @@ services:
       - "${APP_PORT}:${APP_PORT}"
     environment:
       - DB_URL=jdbc:postgresql://postgres:5432/tcc
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASS=${POSTGRES_PASSWORD}
       - REDIS_HOST=redis
     depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    links:
       - postgres
       - redis
 
