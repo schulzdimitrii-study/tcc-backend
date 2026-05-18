@@ -1,5 +1,6 @@
 package br.inatel.tcc.service
 
+import br.inatel.tcc.domain.horde.Horde
 import org.springframework.stereotype.Service
 
 /**
@@ -15,10 +16,6 @@ import org.springframework.stereotype.Service
  *   - O tempo decorrido é derivado do clock atual + start time já no Redis
  *   - Sem I/O adicional — cálculo puramente local (< 1µs)
  *   - Resultado sempre fresco (não fica desatualizado em cache)
- *
- * TODO [FASE 2 - HORDA DINÂMICA]: Suportar hordes com parentHorde (Horde.parentHorde).
- *   A posição de uma sub-horda pode ter um multiplicador ou offset relativo à horda pai.
- *   Referência: domain/horde/Horde.kt (campo parentHorde)
  *
  * TODO [FASE 3 - HORDA ADAPTATIVA]: Implementar modo onde o pace da Horda se adapta
  *   dinamicamente à performance média dos usuários ativos na sessão.
@@ -36,4 +33,15 @@ class HordePositionService {
         val elapsedMinutes = elapsedSeconds / 60.0
         return elapsedMinutes / targetPaceMinPerKm
     }
+
+    /**
+     * Resolve o pace efetivo de uma Horda considerando herança de sub-hordas.
+     *
+     * Sub-hordas sem targetPace próprio herdam o pace da horda pai, permitindo
+     * criar variações de dificuldade sem duplicar a configuração.
+     *
+     * @return targetPace da horda ou do pai; null se nenhum dos dois tiver pace definido
+     */
+    fun resolveEffectivePace(horde: Horde): Double? =
+        horde.targetPace ?: horde.parentHorde?.targetPace
 }

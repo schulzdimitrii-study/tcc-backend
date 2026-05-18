@@ -46,7 +46,8 @@ class TrainSessionService(
     private val userRepository: UserRepository,
     private val hordeRepository: HordeRepository,
     private val rankingRepository: RankingRepository,
-    private val leaderboardRedisService: LeaderboardRedisService
+    private val leaderboardRedisService: LeaderboardRedisService,
+    private val hordePositionService: HordePositionService
 ) {
 
     @Transactional
@@ -73,7 +74,7 @@ class TrainSessionService(
 
         val sessionId = session.id.toString()
 
-        leaderboardRedisService.initSession(sessionId, horde?.targetPace)
+        leaderboardRedisService.initSession(sessionId, horde?.let { hordePositionService.resolveEffectivePace(it) })
 
         return StartSessionResponse(sessionId = sessionId)
     }

@@ -5,6 +5,8 @@ import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
+import jakarta.validation.ConstraintViolation
+import jakarta.validation.Validator
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
@@ -13,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -27,6 +30,7 @@ class BiometricWebSocketControllerTest {
     @Mock private lateinit var leaderboardRedisService: LeaderboardRedisService
     @Mock private lateinit var hordePositionService: HordePositionService
     @Mock private lateinit var messagingTemplate: SimpMessagingTemplate
+    @Mock private lateinit var validator: Validator
 
     @InjectMocks private lateinit var controller: BiometricWebSocketController
 
@@ -174,6 +178,17 @@ class BiometricWebSocketControllerTest {
 
         verify(messagingTemplate).convertAndSend(any<String>(), captor.capture())
         assert(captor.firstValue.userRank == 1)
+    }
+
+    @Test
+    fun shouldRejectMessageWhenValidationFails() {
+        val message = buildMessage()
+        val violation = mock<ConstraintViolation<BiometricDataMessage>>()
+        whenever(validator.validate(message)).thenReturn(setOf(violation))
+
+        controller.receiveBiometricData(message)
+
+        verify(messagingTemplate, never()).convertAndSend(any<String>(), any<LeaderboardResponse>())
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
