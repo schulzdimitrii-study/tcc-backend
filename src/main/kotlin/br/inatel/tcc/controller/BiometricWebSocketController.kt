@@ -6,6 +6,7 @@ import br.inatel.tcc.dto.LeaderboardResponse
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
+import jakarta.validation.Validator
 import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.simp.SimpMessagingTemplate
@@ -20,7 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag
  * Recebe o fluxo de biometria do Galaxy Watch via WebSocket STOMP e
  * atualiza o estado em tempo real no Redis.
  *
- * Canal de entrada:  /app/treino/dados  (prefixo /app configurado em WebSocketConfig)
+ * Canal de entrada:  /app/train/data  (prefixo /app configurado em WebSocketConfig)
  * Canal de saída:    /topic/session/{sessionId}/leaderboard  (broadcast para todos na sessão)
  *
  * Cada operação Redis neste handler leva < 1ms → latência total do handler < 10ms.
@@ -41,7 +42,8 @@ class BiometricWebSocketController(
     private val sessionRedisService: SessionRedisService,
     private val leaderboardRedisService: LeaderboardRedisService,
     private val hordePositionService: HordePositionService,
-    private val messagingTemplate: SimpMessagingTemplate
+    private val messagingTemplate: SimpMessagingTemplate,
+    private val validator: Validator
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -49,6 +51,13 @@ class BiometricWebSocketController(
     @Operation(summary = "Receive biometric data from a user", responses = [ApiResponse(description = "Biometric data received", content = [Content(mediaType = "application/json", schema = Schema(implementation = BiometricDataMessage::class))])])
     @MessageMapping("/train/data")
     fun receiveBiometricData(message: BiometricDataMessage) {
+        val violations = validator.validate(message)
+        if (violations.isNotEmpty()) {
+            log.warn("[BIOMETRIA] Dados inválidos rejeitados sessionId={}: {}",
+                message.sessionId, violations.map { "${it.propertyPath}: ${it.message}" })
+            return
+        }
+
         val start = System.currentTimeMillis()
 
         sessionRedisService.saveUserState(message.sessionId, message.userId, message)
