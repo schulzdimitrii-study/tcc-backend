@@ -11,6 +11,7 @@ import br.inatel.tcc.domain.user.User
 import br.inatel.tcc.domain.user.UserRepository
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.service.redis.LeaderboardRedisService
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -173,4 +174,26 @@ class TrainSessionServiceTest {
 
         verify(leaderboardRedisService).expireSessionKeys(sessionId.toString())
     }
+
+    // ─── getAllHordes ─────────────────────────────────────────────────────────
+
+    @Test
+    fun shouldReturnAllHordes() {
+        val hordeId1 = UUID.randomUUID()
+        val hordeId2 = UUID.randomUUID()
+        val hordes = listOf(
+            Horde(id = hordeId1, name = "Easy Horde", difficulty = HordeDifficulty.EASY, estimatedDuration = 30),
+            Horde(id = hordeId2, name = "Hard Horde", difficulty = HordeDifficulty.HARD, estimatedDuration = 90)
+        )
+        whenever(hordeRepository.findAll()).thenReturn(hordes)
+
+        val result = service.getAllHordes()
+
+        assertEquals(2, result.size)
+        assertEquals("Easy Horde", result[0].name)
+        assertEquals(HordeDifficulty.EASY, result[0].difficulty)
+        assertEquals("Hard Horde", result[1].name)
+        assertEquals(HordeDifficulty.HARD, result[1].difficulty)
+    }
 }
+
