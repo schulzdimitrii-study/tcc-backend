@@ -194,7 +194,29 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Deploy to DigitalOcean Droplet
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build project JAR
+        run: ./mvnw clean package -DskipTests
+
+      - name: Copy JAR to DigitalOcean Droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: "target/*.jar"
+          target: ${{ secrets.PROJECT_PATH }}
+          strip_components: 0
+
+      - name: Restart Docker Containers
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DO_HOST }}
