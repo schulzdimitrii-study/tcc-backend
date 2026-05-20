@@ -55,4 +55,18 @@ class SessionRedisService(
     fun expireUserKey(sessionId: String, userId: String) {
         redis.expire(userKey(sessionId, userId), Duration.ofHours(1))
     }
+
+    /**
+     * Calcula o pace médio dos usuários ativos na sessão.
+     * Usado pelo modo adaptativo de horda para atualizar o pace em tempo real.
+     *
+     * @param userIds Lista de userIds ativos (obtida do leaderboard ZSET)
+     * @return Média do pace em min/km, ou null se nenhum usuário tiver pace válido
+     */
+    fun getAveragePace(sessionId: String, userIds: List<String>): Double? {
+        val paces = userIds.mapNotNull { userId ->
+            getUserState(sessionId, userId)["pace"]?.toDoubleOrNull()
+        }.filter { it > 0 }
+        return if (paces.isEmpty()) null else paces.average()
+    }
 }

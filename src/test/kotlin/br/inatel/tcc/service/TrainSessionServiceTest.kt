@@ -11,6 +11,7 @@ import br.inatel.tcc.domain.user.User
 import br.inatel.tcc.domain.user.UserRepository
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.service.redis.LeaderboardRedisService
+import br.inatel.tcc.service.AchievementService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -36,6 +37,8 @@ class TrainSessionServiceTest {
     @Mock private lateinit var hordeRepository: HordeRepository
     @Mock private lateinit var rankingRepository: RankingRepository
     @Mock private lateinit var leaderboardRedisService: LeaderboardRedisService
+    @Mock private lateinit var hordePositionService: HordePositionService
+    @Mock private lateinit var achievementService: AchievementService
 
     @InjectMocks private lateinit var service: TrainSessionService
 
@@ -75,11 +78,29 @@ class TrainSessionServiceTest {
         whenever(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(buildUser()))
         whenever(hordeRepository.findById(hordeId)).thenReturn(Optional.of(horde))
         whenever(trainSessionRepository.save(any())).thenReturn(savedSession)
+        whenever(hordePositionService.resolveEffectivePace(horde)).thenReturn(6.0)
 
         val response = service.startSession("test@example.com", StartSessionRequest(hordeId = hordeId))
 
         assertNotNull(response.sessionId)
         verify(leaderboardRedisService).initSession(sessionId.toString(), 6.0)
+    }
+
+    @Test
+    fun shouldInheritParentPace_forSubHordeWithoutOwnPace() {
+        val parentId = UUID.randomUUID()
+        val subHordeId = UUID.randomUUID()
+        val parent = Horde(id = parentId, name = "Horda Pai", difficulty = HordeDifficulty.EASY, estimatedDuration = 30, targetPace = 5.0)
+        val subHorde = Horde(id = subHordeId, name = "Sub-Horda", difficulty = HordeDifficulty.MEDIUM, estimatedDuration = 30, targetPace = null, parentHorde = parent)
+        val savedSession = buildSession(subHorde)
+        whenever(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(buildUser()))
+        whenever(hordeRepository.findById(subHordeId)).thenReturn(Optional.of(subHorde))
+        whenever(trainSessionRepository.save(any())).thenReturn(savedSession)
+        whenever(hordePositionService.resolveEffectivePace(subHorde)).thenReturn(5.0)
+
+        service.startSession("test@example.com", StartSessionRequest(hordeId = subHordeId))
+
+        verify(leaderboardRedisService).initSession(sessionId.toString(), 5.0)
     }
 
     @Test

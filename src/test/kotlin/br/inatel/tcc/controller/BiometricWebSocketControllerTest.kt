@@ -2,9 +2,12 @@ package br.inatel.tcc.controller
 
 import br.inatel.tcc.dto.BiometricDataMessage
 import br.inatel.tcc.dto.LeaderboardEntryDto
+import br.inatel.tcc.service.BiometricPersistenceService
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
+import jakarta.validation.ConstraintViolation
+import jakarta.validation.Validator
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
@@ -13,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -27,6 +31,8 @@ class BiometricWebSocketControllerTest {
     @Mock private lateinit var leaderboardRedisService: LeaderboardRedisService
     @Mock private lateinit var hordePositionService: HordePositionService
     @Mock private lateinit var messagingTemplate: SimpMessagingTemplate
+    @Mock private lateinit var validator: Validator
+    @Mock private lateinit var biometricPersistenceService: BiometricPersistenceService
 
     @InjectMocks private lateinit var controller: BiometricWebSocketController
 
@@ -174,6 +180,43 @@ class BiometricWebSocketControllerTest {
 
         verify(messagingTemplate).convertAndSend(any<String>(), captor.capture())
         assert(captor.firstValue.userRank == 1)
+    }
+
+    @Test
+    fun shouldUpdateHordePace_whenHordeIsAdaptive() {
+        val message = buildMessage()
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.isHordeAdaptive(sessionId)).thenReturn(true)
+        whenever(leaderboardRedisService.getTopEntries(sessionId, 10)).thenReturn(
+            linkedSetOf(org.springframework.data.redis.core.DefaultTypedTuple(userId, 2.5))
+        )
+        whenever(sessionRedisService.getAveragePace(sessionId, listOf(userId))).thenReturn(5.5)
+
+        controller.receiveBiometricData(message)
+
+        verify(leaderboardRedisService).updateHordePace(sessionId, 5.5)
+    }
+
+    @Test
+    fun shouldNotUpdateHordePace_whenHordeIsNotAdaptive() {
+        val message = buildMessage()
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.isHordeAdaptive(sessionId)).thenReturn(false)
+
+        controller.receiveBiometricData(message)
+
+        verify(leaderboardRedisService, never()).updateHordePace(any(), any())
+    }
+
+    @Test
+    fun shouldRejectMessageWhenValidationFails() {
+        val message = buildMessage()
+        val violation = mock<ConstraintViolation<BiometricDataMessage>>()
+        whenever(validator.validate(message)).thenReturn(setOf(violation))
+
+        controller.receiveBiometricData(message)
+
+        verify(messagingTemplate, never()).convertAndSend(any<String>(), any<LeaderboardResponse>())
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

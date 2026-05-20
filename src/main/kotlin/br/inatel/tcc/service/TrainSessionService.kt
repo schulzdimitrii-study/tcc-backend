@@ -30,10 +30,6 @@ import java.util.UUID
  *   Durante a corrida → apenas Redis (< 1ms por operação)
  *   Ao encerrar       → flush para PostgreSQL (rankings + sessão)
  *
- * TODO [FASE 3 - ACHIEVEMENTS]: Após persistir o ranking, verificar critérios de conquistas
- *   (ex: primeira corrida completada, 5km, top 1 na Horda) e registrar em UserAchievement.
- *   Referência: domain/userachievement/UserAchievement.kt + domain/achievement/Achievement.kt
- *
  * TODO [FASE 4 - AMIGOS]: Ao encerrar, notificar amigos do usuário via WebSocket
  *   sobre o resultado da sessão.
  *   Referência: domain/friendship/FriendshipRepository.kt
@@ -47,7 +43,9 @@ class TrainSessionService(
     private val userRepository: UserRepository,
     private val hordeRepository: HordeRepository,
     private val rankingRepository: RankingRepository,
-    private val leaderboardRedisService: LeaderboardRedisService
+    private val leaderboardRedisService: LeaderboardRedisService,
+    private val hordePositionService: HordePositionService,
+    private val achievementService: AchievementService
 ) {
 
     @Transactional
@@ -74,7 +72,11 @@ class TrainSessionService(
 
         val sessionId = session.id.toString()
 
-        leaderboardRedisService.initSession(sessionId, horde?.targetPace)
+        leaderboardRedisService.initSession(
+            sessionId,
+            horde?.let { hordePositionService.resolveEffectivePace(it) },
+            horde?.isAdaptive ?: false
+        )
 
         return StartSessionResponse(sessionId = sessionId)
     }
@@ -108,7 +110,7 @@ class TrainSessionService(
             ?.firstOrNull { it.value == session.user.id.toString() }
             ?.score
 
-        trainSessionRepository.save(
+        val updatedSession = trainSessionRepository.save(
             TrainSession(
                 id = session.id,
                 user = session.user,
@@ -123,6 +125,8 @@ class TrainSessionService(
         )
 
         leaderboardRedisService.expireSessionKeys(sessionId)
+
+        achievementService.verifyAndGrant(session.user, updatedSession, finalLeaderboard)
     }
 
     fun getLeaderboard(sessionId: String): List<LeaderboardEntryDto> {

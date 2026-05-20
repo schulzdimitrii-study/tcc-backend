@@ -11,6 +11,7 @@ services:
       - DB_USER=${POSTGRES_USER}
       - DB_PASS=${POSTGRES_PASSWORD}
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
     deploy:
       resources:
         limits:

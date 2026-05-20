@@ -3,9 +3,11 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.dto.BiometricDataMessage
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.LeaderboardResponse
+import br.inatel.tcc.service.BiometricPersistenceService
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
+import jakarta.validation.Validator
 import org.slf4j.LoggerFactory
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.simp.SimpMessagingTemplate
@@ -20,15 +22,10 @@ import io.swagger.v3.oas.annotations.tags.Tag
  * Recebe o fluxo de biometria do Galaxy Watch via WebSocket STOMP e
  * atualiza o estado em tempo real no Redis.
  *
- * Canal de entrada:  /app/treino/dados  (prefixo /app configurado em WebSocketConfig)
+ * Canal de entrada:  /app/train/data  (prefixo /app configurado em WebSocketConfig)
  * Canal de saída:    /topic/session/{sessionId}/leaderboard  (broadcast para todos na sessão)
  *
  * Cada operação Redis neste handler leva < 1ms → latência total do handler < 10ms.
- *
- * TODO [FASE 3 - PERSISTÊNCIA BIOMÉTRICA]: Persistir cada BiometricDataMessage no PostgreSQL
- *   de forma assíncrona usando @Async (Spring) ou uma fila em memória (ArrayBlockingQueue)
- *   para não bloquear o fluxo WebSocket. Criar BiometricData entity e associar ao TrainSession.
- *   Referência: domain/biometricdata/BiometricData.kt + BiometricDataRepository
  *
  * TODO [FASE 4 - ZONA CARDÍACA]: Após calcular a zona cardíaca (CardiacZone.kt),
  *   incluí-la no LeaderboardResponse para que o app exiba o ícone de intensidade
@@ -41,7 +38,9 @@ class BiometricWebSocketController(
     private val sessionRedisService: SessionRedisService,
     private val leaderboardRedisService: LeaderboardRedisService,
     private val hordePositionService: HordePositionService,
-    private val messagingTemplate: SimpMessagingTemplate
+    private val messagingTemplate: SimpMessagingTemplate,
+    private val validator: Validator,
+    private val biometricPersistenceService: BiometricPersistenceService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -49,7 +48,17 @@ class BiometricWebSocketController(
     @Operation(summary = "Receive biometric data from a user", responses = [ApiResponse(description = "Biometric data received", content = [Content(mediaType = "application/json", schema = Schema(implementation = BiometricDataMessage::class))])])
     @MessageMapping("/train/data")
     fun receiveBiometricData(message: BiometricDataMessage) {
+        val violations = validator.validate(message)
+        if (violations.isNotEmpty()) {
+            log.warn("[BIOMETRIA] Dados inválidos rejeitados sessionId={}: {}",
+                message.sessionId, violations.map { "${it.propertyPath}: ${it.message}" })
+            return
+        }
+
         val start = System.currentTimeMillis()
+
+        // Persiste no PostgreSQL de forma assíncrona — não bloqueia o handler
+        biometricPersistenceService.persistAsync(message)
 
         sessionRedisService.saveUserState(message.sessionId, message.userId, message)
         leaderboardRedisService.updateUserDistance(message.sessionId, message.userId, message.accumulatedDistance)
@@ -63,6 +72,15 @@ class BiometricWebSocketController(
                     distanceKm = tuple.score ?: 0.0
                 )
             } ?: emptyList()
+
+        // Horda adaptativa: atualiza o pace no Redis com a média dos usuários ativos
+        if (leaderboardRedisService.isHordeAdaptive(message.sessionId) && entries.isNotEmpty()) {
+            val activeUserIds = entries.map { it.userId }
+            val avgPace = sessionRedisService.getAveragePace(message.sessionId, activeUserIds)
+            if (avgPace != null && avgPace > 0) {
+                leaderboardRedisService.updateHordePace(message.sessionId, avgPace)
+            }
+        }
 
         val startEpoch = leaderboardRedisService.getSessionStartEpoch(message.sessionId)
         val hordePace = leaderboardRedisService.getHordePace(message.sessionId)
