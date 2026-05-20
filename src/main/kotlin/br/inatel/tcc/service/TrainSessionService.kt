@@ -7,6 +7,7 @@ import br.inatel.tcc.domain.trainsession.TrainSessionRepository
 import br.inatel.tcc.domain.trainsession.TrainType
 import br.inatel.tcc.domain.horde.HordeRepository
 import br.inatel.tcc.domain.user.UserRepository
+import br.inatel.tcc.dto.HordeResponse
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
@@ -143,5 +144,18 @@ class TrainSessionService(
         val id = UUID.fromString(sessionId)
         return trainSessionRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Sessão não encontrada: $sessionId") }
+    }
+
+    fun getAllHordes(): List<HordeResponse> {
+        return hordeRepository.findAll().map { horde ->
+            HordeResponse(
+                id = horde.id,
+                name = horde.name,
+                description = horde.description,
+                difficulty = horde.difficulty,
+                estimatedDuration = horde.estimatedDuration,
+                targetPace = horde.targetPace
+            )
+        }
     }
 }

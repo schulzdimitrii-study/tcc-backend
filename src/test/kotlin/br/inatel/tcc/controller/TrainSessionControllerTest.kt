@@ -3,6 +3,7 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.domain.trainsession.TrainSession
 import br.inatel.tcc.domain.trainsession.TrainType
 import br.inatel.tcc.domain.user.User
+import br.inatel.tcc.dto.HordeResponse
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
@@ -152,6 +153,24 @@ class TrainSessionControllerTest {
         assertThrows(IllegalArgumentException::class.java) {
             controller.getSession(sessionId.toString(), principal)
         }
+    }
+
+    // ─── GET /sessions/hordes ─────────────────────────────────────────────────
+
+    @Test
+    fun getHordes_shouldReturn200WithHordes() {
+        val principal = mockAuthentication("user@example.com")
+        val hordes = listOf(
+            HordeResponse(id = UUID.randomUUID(), name = "Horde 1", description = "Desc 1", difficulty = br.inatel.tcc.domain.horde.HordeDifficulty.EASY, estimatedDuration = 30, targetPace = 5.0)
+        )
+        whenever(trainSessionService.getAllHordes()).thenReturn(hordes)
+
+        val response = controller.getHordes(principal)
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals(1, response.body?.size)
+        assertEquals("Horde 1", response.body?.first()?.name)
+        verify(trainSessionService).getAllHordes()
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

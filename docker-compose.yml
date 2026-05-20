@@ -2,26 +2,35 @@ name: tcc
 
 services:
   app:
+    build: .
     image: tcc-backend:latest
     ports:
       - "${APP_PORT}:${APP_PORT}"
     environment:
-      - DB_URL=jdbc:postgresql://postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      - DB_URL=jdbc:postgresql://postgres:5432/tcc
       - DB_USER=${POSTGRES_USER}
       - DB_PASS=${POSTGRES_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    deploy:
+      resources:
+        limits:
+          memory: 450M
+        reservations:
+          memory: 300M
+
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    links:
+      - postgres
+      - redis
 
   postgres:
     image: postgres:17
     restart: unless-stopped
-    ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -37,8 +46,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
     volumes:
       - redis_data:/data
     healthcheck:

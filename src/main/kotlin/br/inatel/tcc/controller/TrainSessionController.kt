@@ -1,5 +1,6 @@
 package br.inatel.tcc.controller
 
+import br.inatel.tcc.dto.HordeResponse
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
@@ -65,5 +66,14 @@ class TrainSessionController(
     ): ResponseEntity<TrainSession> {
         val session = trainSessionService.getSession(sessionId)
         return ResponseEntity.ok(session)
+    }
+
+    @Operation(summary = "List all hordes", responses = [ApiResponse(description = "List of hordes", content = [Content(mediaType = "application/json", schema = Schema(implementation = HordeResponse::class))])])
+    @GetMapping(value = ["/hordes"])
+    fun getHordes(
+        authentication: Authentication
+    ): ResponseEntity<List<HordeResponse>> {
+        val hordes = trainSessionService.getAllHordes()
+        return ResponseEntity.ok(hordes)
     }
 }
