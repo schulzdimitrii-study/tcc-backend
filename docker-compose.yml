@@ -11,6 +11,12 @@ services:
       - DB_USER=${POSTGRES_USER}
       - DB_PASS=${POSTGRES_PASSWORD}
       - REDIS_HOST=redis
+    deploy:
+      resources:
+        limits:
+          memory: 450M
+        reservations:
+          memory: 300M
 
     depends_on:
       postgres:

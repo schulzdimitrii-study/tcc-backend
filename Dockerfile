@@ -22,8 +22,10 @@ USER app
 EXPOSE 8080
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport \
-    -Xmx300m \
-    -Xms300m \
+    -Xmx256m \
+    -Xms256m \
+    -XX:MaxMetaspaceSize=80m \
+    -Xss256k \
     -XX:+UseSerialGC \
     -Djava.security.egd=file:/dev/./urandom \
     -Dspring.profiles.active=prod"
