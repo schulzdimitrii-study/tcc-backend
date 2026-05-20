@@ -6,4 +6,5 @@ import java.util.UUID
 interface TrainSessionRepository : JpaRepository<TrainSession, UUID> {
     fun findByUserId(userId: UUID): List<TrainSession>
     fun findByUserIdAndHordeId(userId: UUID, hordeId: UUID): List<TrainSession>
+    fun countByUser_IdAndEndDateIsNotNull(userId: UUID): Long
 }

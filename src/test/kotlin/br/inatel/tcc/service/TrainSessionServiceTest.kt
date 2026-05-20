@@ -11,6 +11,7 @@ import br.inatel.tcc.domain.user.User
 import br.inatel.tcc.domain.user.UserRepository
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.service.redis.LeaderboardRedisService
+import br.inatel.tcc.service.AchievementService
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -36,6 +37,7 @@ class TrainSessionServiceTest {
     @Mock private lateinit var rankingRepository: RankingRepository
     @Mock private lateinit var leaderboardRedisService: LeaderboardRedisService
     @Mock private lateinit var hordePositionService: HordePositionService
+    @Mock private lateinit var achievementService: AchievementService
 
     @InjectMocks private lateinit var service: TrainSessionService
 
