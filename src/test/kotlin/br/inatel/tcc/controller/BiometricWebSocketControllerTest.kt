@@ -3,6 +3,7 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.dto.BiometricDataMessage
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.service.BiometricPersistenceService
+import br.inatel.tcc.service.CardiacZoneService
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
@@ -33,6 +34,7 @@ class BiometricWebSocketControllerTest {
     @Mock private lateinit var messagingTemplate: SimpMessagingTemplate
     @Mock private lateinit var validator: Validator
     @Mock private lateinit var biometricPersistenceService: BiometricPersistenceService
+    @Mock private lateinit var cardiacZoneService: CardiacZoneService
 
     @InjectMocks private lateinit var controller: BiometricWebSocketController
 
