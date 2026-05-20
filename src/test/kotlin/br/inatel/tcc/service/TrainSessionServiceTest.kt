@@ -9,6 +9,9 @@ import br.inatel.tcc.domain.trainsession.TrainSessionRepository
 import br.inatel.tcc.domain.trainsession.TrainType
 import br.inatel.tcc.domain.user.User
 import br.inatel.tcc.domain.user.UserRepository
+import br.inatel.tcc.domain.friendship.Friendship
+import br.inatel.tcc.domain.friendship.FriendshipRepository
+import br.inatel.tcc.domain.friendship.FriendshipStatus
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.AchievementService
@@ -22,10 +25,12 @@ import org.mockito.Mock
 import org.mockito.Mockito.times
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.data.redis.core.DefaultTypedTuple
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import java.util.Optional
 import java.util.UUID
 
@@ -39,6 +44,8 @@ class TrainSessionServiceTest {
     @Mock private lateinit var leaderboardRedisService: LeaderboardRedisService
     @Mock private lateinit var hordePositionService: HordePositionService
     @Mock private lateinit var achievementService: AchievementService
+    @Mock private lateinit var friendshipRepository: FriendshipRepository
+    @Mock private lateinit var messagingTemplate: SimpMessagingTemplate
 
     @InjectMocks private lateinit var service: TrainSessionService
 
@@ -194,6 +201,48 @@ class TrainSessionServiceTest {
         service.endSession(sessionId.toString())
 
         verify(leaderboardRedisService).expireSessionKeys(sessionId.toString())
+    }
+
+    // ─── notifyFriends ────────────────────────────────────────────────────────
+
+    @Test
+    fun shouldNotifyAcceptedFriends_onSessionEnd() {
+        val friendId = UUID.randomUUID()
+        val friend = User(id = friendId, email = "friend@test.com", name = "Friend", password = "enc")
+        val sess = buildSession()
+        val friendship = Friendship(
+            requester = buildUser(),
+            recipient = friend,
+            status = FriendshipStatus.ACCEPTED
+        )
+        val leaderboard = linkedSetOf(DefaultTypedTuple(userId.toString(), 5.0))
+
+        whenever(trainSessionRepository.findById(sessionId)).thenReturn(Optional.of(sess))
+        whenever(leaderboardRedisService.getFullLeaderboard(sessionId.toString())).thenReturn(leaderboard)
+        whenever(userRepository.findById(userId)).thenReturn(Optional.of(buildUser()))
+        whenever(rankingRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(trainSessionRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(friendshipRepository.findByRequesterIdOrRecipientId(userId, userId)).thenReturn(listOf(friendship))
+
+        service.endSession(sessionId.toString())
+
+        verify(messagingTemplate).convertAndSend(
+            eq("/topic/user/$friendId/notifications"),
+            any<br.inatel.tcc.dto.SessionResultNotification>()
+        )
+    }
+
+    @Test
+    fun shouldNotNotify_whenUserHasNoAcceptedFriends() {
+        val sess = buildSession()
+        whenever(trainSessionRepository.findById(sessionId)).thenReturn(Optional.of(sess))
+        whenever(leaderboardRedisService.getFullLeaderboard(sessionId.toString())).thenReturn(emptySet())
+        whenever(trainSessionRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(friendshipRepository.findByRequesterIdOrRecipientId(userId, userId)).thenReturn(emptyList())
+
+        service.endSession(sessionId.toString())
+
+        verify(messagingTemplate, never()).convertAndSend(any<String>(), any<Any>())
     }
 
     // ─── getAllHordes ─────────────────────────────────────────────────────────
