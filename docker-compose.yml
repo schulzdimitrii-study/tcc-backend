@@ -15,9 +15,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 450M
+          memory: 600M
         reservations:
-          memory: 300M
+          memory: 400M
 
     depends_on:
       postgres:
