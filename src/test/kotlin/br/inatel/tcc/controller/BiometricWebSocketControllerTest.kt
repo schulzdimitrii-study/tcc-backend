@@ -2,6 +2,7 @@ package br.inatel.tcc.controller
 
 import br.inatel.tcc.dto.BiometricDataMessage
 import br.inatel.tcc.dto.LeaderboardEntryDto
+import br.inatel.tcc.service.BiometricPersistenceService
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
@@ -31,6 +32,7 @@ class BiometricWebSocketControllerTest {
     @Mock private lateinit var hordePositionService: HordePositionService
     @Mock private lateinit var messagingTemplate: SimpMessagingTemplate
     @Mock private lateinit var validator: Validator
+    @Mock private lateinit var biometricPersistenceService: BiometricPersistenceService
 
     @InjectMocks private lateinit var controller: BiometricWebSocketController
 
@@ -178,6 +180,32 @@ class BiometricWebSocketControllerTest {
 
         verify(messagingTemplate).convertAndSend(any<String>(), captor.capture())
         assert(captor.firstValue.userRank == 1)
+    }
+
+    @Test
+    fun shouldUpdateHordePace_whenHordeIsAdaptive() {
+        val message = buildMessage()
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.isHordeAdaptive(sessionId)).thenReturn(true)
+        whenever(leaderboardRedisService.getTopEntries(sessionId, 10)).thenReturn(
+            linkedSetOf(org.springframework.data.redis.core.DefaultTypedTuple(userId, 2.5))
+        )
+        whenever(sessionRedisService.getAveragePace(sessionId, listOf(userId))).thenReturn(5.5)
+
+        controller.receiveBiometricData(message)
+
+        verify(leaderboardRedisService).updateHordePace(sessionId, 5.5)
+    }
+
+    @Test
+    fun shouldNotUpdateHordePace_whenHordeIsNotAdaptive() {
+        val message = buildMessage()
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.isHordeAdaptive(sessionId)).thenReturn(false)
+
+        controller.receiveBiometricData(message)
+
+        verify(leaderboardRedisService, never()).updateHordePace(any(), any())
     }
 
     @Test
