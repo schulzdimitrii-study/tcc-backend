@@ -1,5 +1,6 @@
 package br.inatel.tcc.service.redis
 
+import br.inatel.tcc.domain.biometricdata.CardiacZone
 import br.inatel.tcc.dto.BiometricDataMessage
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.stereotype.Service
@@ -17,10 +18,6 @@ import java.time.Duration
  *   - HMSET atualiza campos individuais sem reescrever o objeto inteiro
  *   - Permite leituras parciais (HGET "bpm") para dashboards específicos
  *
- * TODO [FASE 4 - ZONA CARDÍACA]: Calcular e armazenar cardiacZone neste HASH
- *   com base no bpm recebido e no User.maxHeartRate (buscar do PostgreSQL no initSession
- *   e cachear em Redis para evitar query a cada update).
- *   Referência: domain/biometricdata/CardiacZone.kt
  */
 @Service
 class SessionRedisService(
@@ -30,9 +27,9 @@ class SessionRedisService(
     private fun userKey(sessionId: String, userId: String) = "session:$sessionId:user:$userId"
 
     /** Salva ou atualiza o estado biométrico atual do usuário (HMSET). */
-    fun saveUserState(sessionId: String, userId: String, message: BiometricDataMessage) {
+    fun saveUserState(sessionId: String, userId: String, message: BiometricDataMessage, cardiacZone: CardiacZone? = null) {
         val key = userKey(sessionId, userId)
-        val fields = mapOf(
+        val fields = mutableMapOf(
             "bpm"       to message.bpm.toString(),
             "speed"     to message.speed.toString(),
             "pace"      to message.pace.toString(),
@@ -41,9 +38,20 @@ class SessionRedisService(
             "calories"  to message.accumulatedCalories.toString(),
             "timestamp" to message.timestamp.toString()
         )
+        cardiacZone?.let { fields["cardiacZone"] = it.name }
         redis.opsForHash<String, String>().putAll(key, fields)
         redis.expire(key, Duration.ofHours(24))
     }
+
+    /**
+     * Retorna o mapa de userId → CardiacZone para os usuários fornecidos.
+     * Lê o campo "cardiacZone" do HASH de cada usuário.
+     */
+    fun getCardiacZones(sessionId: String, userIds: List<String>): Map<String, CardiacZone?> =
+        userIds.associateWith { userId ->
+            getUserState(sessionId, userId)["cardiacZone"]
+                ?.let { runCatching { CardiacZone.valueOf(it) }.getOrNull() }
+        }
 
     /** Lê o último estado biométrico do usuário na sessão. */
     fun getUserState(sessionId: String, userId: String): Map<String, String> {
