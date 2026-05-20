@@ -34,8 +34,8 @@ class UserControllerTest {
         email = "test@example.com",
         birthdayDate = LocalDate.of(1990, 1, 1),
         maxHeartRate = 180,
-        height = 175.0,
-        weight = 70.0
+        height = 175.99,
+        weight = 70.56
     )
 
     // ─── GET /users/{id} ──────────────────────────────────────────────────────

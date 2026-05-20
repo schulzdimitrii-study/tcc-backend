@@ -1,16 +1,23 @@
 package br.inatel.tcc.service
 
+import br.inatel.tcc.domain.friendship.FriendshipRepository
+import br.inatel.tcc.domain.friendship.FriendshipStatus
 import br.inatel.tcc.domain.ranking.Ranking
 import br.inatel.tcc.domain.ranking.RankingRepository
 import br.inatel.tcc.domain.trainsession.TrainSession
 import br.inatel.tcc.domain.trainsession.TrainSessionRepository
 import br.inatel.tcc.domain.trainsession.TrainType
 import br.inatel.tcc.domain.horde.HordeRepository
+import br.inatel.tcc.domain.user.User
 import br.inatel.tcc.domain.user.UserRepository
+import br.inatel.tcc.dto.HordeResponse
 import br.inatel.tcc.dto.LeaderboardEntryDto
+import br.inatel.tcc.dto.SessionResultNotification
 import br.inatel.tcc.dto.StartSessionRequest
 import br.inatel.tcc.dto.StartSessionResponse
 import br.inatel.tcc.service.redis.LeaderboardRedisService
+import org.springframework.data.redis.core.ZSetOperations
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -29,14 +36,6 @@ import java.util.UUID
  *   Durante a corrida → apenas Redis (< 1ms por operação)
  *   Ao encerrar       → flush para PostgreSQL (rankings + sessão)
  *
- * TODO [FASE 3 - ACHIEVEMENTS]: Após persistir o ranking, verificar critérios de conquistas
- *   (ex: primeira corrida completada, 5km, top 1 na Horda) e registrar em UserAchievement.
- *   Referência: domain/userachievement/UserAchievement.kt + domain/achievement/Achievement.kt
- *
- * TODO [FASE 4 - AMIGOS]: Ao encerrar, notificar amigos do usuário via WebSocket
- *   sobre o resultado da sessão.
- *   Referência: domain/friendship/FriendshipRepository.kt
- *
  * TODO [FASE 5 - CHECKPOINTS]: Implementar flush incremental no PostgreSQL a cada 5 minutos
  *   como checkpoint (caso o app feche inesperadamente e a sessão não seja encerrada).
  */
@@ -47,7 +46,10 @@ class TrainSessionService(
     private val hordeRepository: HordeRepository,
     private val rankingRepository: RankingRepository,
     private val leaderboardRedisService: LeaderboardRedisService,
-    private val hordePositionService: HordePositionService
+    private val hordePositionService: HordePositionService,
+    private val achievementService: AchievementService,
+    private val friendshipRepository: FriendshipRepository,
+    private val messagingTemplate: SimpMessagingTemplate
 ) {
 
     @Transactional
@@ -74,7 +76,11 @@ class TrainSessionService(
 
         val sessionId = session.id.toString()
 
-        leaderboardRedisService.initSession(sessionId, horde?.let { hordePositionService.resolveEffectivePace(it) })
+        leaderboardRedisService.initSession(
+            sessionId,
+            horde?.let { hordePositionService.resolveEffectivePace(it) },
+            horde?.isAdaptive ?: false
+        )
 
         return StartSessionResponse(sessionId = sessionId)
     }
@@ -108,7 +114,7 @@ class TrainSessionService(
             ?.firstOrNull { it.value == session.user.id.toString() }
             ?.score
 
-        trainSessionRepository.save(
+        val updatedSession = trainSessionRepository.save(
             TrainSession(
                 id = session.id,
                 user = session.user,
@@ -123,6 +129,42 @@ class TrainSessionService(
         )
 
         leaderboardRedisService.expireSessionKeys(sessionId)
+
+        achievementService.verifyAndGrant(session.user, updatedSession, finalLeaderboard)
+        notifyFriends(session.user, updatedSession, finalLeaderboard)
+    }
+
+    private fun notifyFriends(
+        user: User,
+        session: TrainSession,
+        finalLeaderboard: Set<ZSetOperations.TypedTuple<String>>?
+    ) {
+        val userId = user.id ?: return
+        val friendships = friendshipRepository.findByRequesterIdOrRecipientId(userId, userId)
+            .filter { it.status == FriendshipStatus.ACCEPTED }
+        if (friendships.isEmpty()) return
+
+        val userRank = finalLeaderboard
+            ?.indexOfFirst { it.value == userId.toString() }
+            ?.takeIf { it >= 0 }
+            ?.plus(1)
+
+        val notification = SessionResultNotification(
+            userId = userId.toString(),
+            userName = user.name,
+            sessionId = session.id.toString(),
+            totalDistanceKm = session.totalDistance,
+            rank = userRank
+        )
+
+        for (friendship in friendships) {
+            val friendId = if (friendship.requester.id == userId) {
+                friendship.recipient.id
+            } else {
+                friendship.requester.id
+            } ?: continue
+            messagingTemplate.convertAndSend("/topic/user/$friendId/notifications", notification)
+        }
     }
 
     fun getLeaderboard(sessionId: String): List<LeaderboardEntryDto> {
@@ -140,5 +182,18 @@ class TrainSessionService(
         val id = UUID.fromString(sessionId)
         return trainSessionRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Sessão não encontrada: $sessionId") }
+    }
+
+    fun getAllHordes(): List<HordeResponse> {
+        return hordeRepository.findAll().map { horde ->
+            HordeResponse(
+                id = horde.id,
+                name = horde.name,
+                description = horde.description,
+                difficulty = horde.difficulty,
+                estimatedDuration = horde.estimatedDuration,
+                targetPace = horde.targetPace
+            )
+        }
     }
 }

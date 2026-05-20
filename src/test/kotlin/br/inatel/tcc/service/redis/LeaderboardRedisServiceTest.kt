@@ -152,12 +152,13 @@ class LeaderboardRedisServiceTest {
     // ─── expireSessionKeys ────────────────────────────────────────────────────
 
     @Test
-    fun shouldExpireAllThreeKeys() {
+    fun shouldExpireAllKeys() {
         service.expireSessionKeys(sessionId)
 
-        verify(redis, times(3)).expire(any(), eq(Duration.ofHours(1)))
+        verify(redis, times(4)).expire(any(), eq(Duration.ofHours(1)))
         verify(redis).expire(leaderboardKey, Duration.ofHours(1))
         verify(redis).expire(startKey, Duration.ofHours(1))
         verify(redis).expire(hordeKey, Duration.ofHours(1))
+        verify(redis).expire("session:$sessionId:horde:adaptive", Duration.ofHours(1))
     }
 }

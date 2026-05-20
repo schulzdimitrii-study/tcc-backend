@@ -3,6 +3,8 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.dto.BiometricDataMessage
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.LeaderboardResponse
+import br.inatel.tcc.service.BiometricPersistenceService
+import br.inatel.tcc.service.CardiacZoneService
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
@@ -25,16 +27,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
  * Canal de saída:    /topic/session/{sessionId}/leaderboard  (broadcast para todos na sessão)
  *
  * Cada operação Redis neste handler leva < 1ms → latência total do handler < 10ms.
- *
- * TODO [FASE 3 - PERSISTÊNCIA BIOMÉTRICA]: Persistir cada BiometricDataMessage no PostgreSQL
- *   de forma assíncrona usando @Async (Spring) ou uma fila em memória (ArrayBlockingQueue)
- *   para não bloquear o fluxo WebSocket. Criar BiometricData entity e associar ao TrainSession.
- *   Referência: domain/biometricdata/BiometricData.kt + BiometricDataRepository
- *
- * TODO [FASE 4 - ZONA CARDÍACA]: Após calcular a zona cardíaca (CardiacZone.kt),
- *   incluí-la no LeaderboardResponse para que o app exiba o ícone de intensidade
- *   de cada competidor em tempo real.
- *   Referência: domain/biometricdata/CardiacZone.kt
  */
 @Controller
 @Tag(name = "Biometric Data", description = "Biometric Data API")
@@ -43,7 +35,9 @@ class BiometricWebSocketController(
     private val leaderboardRedisService: LeaderboardRedisService,
     private val hordePositionService: HordePositionService,
     private val messagingTemplate: SimpMessagingTemplate,
-    private val validator: Validator
+    private val validator: Validator,
+    private val biometricPersistenceService: BiometricPersistenceService,
+    private val cardiacZoneService: CardiacZoneService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -60,18 +54,40 @@ class BiometricWebSocketController(
 
         val start = System.currentTimeMillis()
 
-        sessionRedisService.saveUserState(message.sessionId, message.userId, message)
+        // Persiste no PostgreSQL de forma assíncrona — não bloqueia o handler
+        biometricPersistenceService.persistAsync(message)
+
+        // Zona cardíaca: cache hit em Redis (sem DB), null se maxHeartRate não configurado
+        val maxHr = cardiacZoneService.getOrCacheMaxHr(message.sessionId, message.userId)
+        val zone = if (maxHr != null) cardiacZoneService.calculate(message.bpm, maxHr) else null
+
+        sessionRedisService.saveUserState(message.sessionId, message.userId, message, zone)
         leaderboardRedisService.updateUserDistance(message.sessionId, message.userId, message.accumulatedDistance)
 
         val userRank = (leaderboardRedisService.getUserRank(message.sessionId, message.userId) ?: 0L) + 1
-        val entries = leaderboardRedisService.getTopEntries(message.sessionId, 10)
-            ?.mapIndexed { index, tuple ->
-                LeaderboardEntryDto(
-                    userId = tuple.value ?: "",
-                    rank = index + 1,
-                    distanceKm = tuple.score ?: 0.0
-                )
-            } ?: emptyList()
+        val topTuples = leaderboardRedisService.getTopEntries(message.sessionId, 10)?.toList() ?: emptyList()
+        val topUserIds = topTuples.map { it.value ?: "" }
+
+        // Zona cardíaca de cada competidor no top-10 (lida do HASH Redis)
+        val cardiacZones = sessionRedisService.getCardiacZones(message.sessionId, topUserIds)
+        val entries = topTuples.mapIndexed { index, tuple ->
+            val entryUserId = tuple.value ?: ""
+            LeaderboardEntryDto(
+                userId = entryUserId,
+                rank = index + 1,
+                distanceKm = tuple.score ?: 0.0,
+                cardiacZone = cardiacZones[entryUserId]
+            )
+        }
+
+        // Horda adaptativa: atualiza o pace no Redis com a média dos usuários ativos
+        if (leaderboardRedisService.isHordeAdaptive(message.sessionId) && entries.isNotEmpty()) {
+            val activeUserIds = entries.map { it.userId }
+            val avgPace = sessionRedisService.getAveragePace(message.sessionId, activeUserIds)
+            if (avgPace != null && avgPace > 0) {
+                leaderboardRedisService.updateHordePace(message.sessionId, avgPace)
+            }
+        }
 
         val startEpoch = leaderboardRedisService.getSessionStartEpoch(message.sessionId)
         val hordePace = leaderboardRedisService.getHordePace(message.sessionId)
@@ -81,18 +97,23 @@ class BiometricWebSocketController(
             null
         }
 
+        val isBehindHorde = hordeVirtualDistance?.let { message.accumulatedDistance < it }
+        val distanceToHorde = hordeVirtualDistance?.let { it - message.accumulatedDistance }
+
         val response = LeaderboardResponse(
             sessionId = message.sessionId,
             userRank = userRank.toInt(),
             hordeVirtualDistanceKm = hordeVirtualDistance,
-            entries = entries
+            entries = entries,
+            isBehindHorde = isBehindHorde,
+            distanceToHorde = distanceToHorde
         )
         messagingTemplate.convertAndSend("/topic/session/${message.sessionId}/leaderboard", response)
 
         val elapsed = System.currentTimeMillis() - start
         log.info(
-            "[BIOMETRIA] sessionId={} userId={} bpm={} distance={}km rank={} horde={}km redis={}ms",
-            message.sessionId, message.userId, message.bpm,
+            "[BIOMETRIA] sessionId={} userId={} bpm={} zone={} distance={}km rank={} horde={}km redis={}ms",
+            message.sessionId, message.userId, message.bpm, zone,
             message.accumulatedDistance, userRank, hordeVirtualDistance, elapsed
         )
     }

@@ -9,9 +9,10 @@ import java.time.Duration
  * Gerencia o leaderboard da sessão de treino no Redis usando Sorted Sets (ZSET).
  *
  * Estrutura de keys Redis:
- *   session:{sessionId}:leaderboard  → ZSET  member=userId, score=distânciaKm
- *   session:{sessionId}:start        → STRING época em segundos do início da sessão
- *   session:{sessionId}:horde:pace   → STRING targetPace da Horda em min/km (opcional)
+ *   session:{sessionId}:leaderboard    → ZSET  member=userId, score=distânciaKm
+ *   session:{sessionId}:start          → STRING época em segundos do início da sessão
+ *   session:{sessionId}:horde:pace     → STRING targetPace da Horda em min/km (opcional)
+ *   session:{sessionId}:horde:adaptive → STRING "true" se horda é adaptativa (opcional)
  *
  * Por que ZSET para o leaderboard?
  *   - ZADD é O(log N) — atualiza posição e reordena em uma única operação
@@ -30,6 +31,7 @@ class LeaderboardRedisService(
     private fun leaderboardKey(sessionId: String) = "session:$sessionId:leaderboard"
     private fun startKey(sessionId: String) = "session:$sessionId:start"
     private fun hordeKey(sessionId: String) = "session:$sessionId:horde:pace"
+    private fun hordeAdaptiveKey(sessionId: String) = "session:$sessionId:horde:adaptive"
 
     /**
      * Inicializa os metadados da sessão no Redis.
@@ -37,7 +39,7 @@ class LeaderboardRedisService(
      *
      * Usa verificação de existência para ser idempotente — reconexões não sobrescrevem o start.
      */
-    fun initSession(sessionId: String, targetPaceMinPerKm: Double?) {
+    fun initSession(sessionId: String, targetPaceMinPerKm: Double?, isAdaptive: Boolean = false) {
         val startKey = startKey(sessionId)
         if (redis.hasKey(startKey) != true) {
             val epochSeconds = System.currentTimeMillis() / 1000
@@ -47,7 +49,23 @@ class LeaderboardRedisService(
             targetPaceMinPerKm?.let {
                 redis.opsForValue().set(hordeKey(sessionId), it.toString(), Duration.ofHours(24))
             }
+
+            if (isAdaptive) {
+                redis.opsForValue().set(hordeAdaptiveKey(sessionId), "true", Duration.ofHours(24))
+            }
         }
+    }
+
+    /** Retorna true se a horda desta sessão está em modo adaptativo. */
+    fun isHordeAdaptive(sessionId: String): Boolean =
+        redis.opsForValue().get(hordeAdaptiveKey(sessionId)) == "true"
+
+    /**
+     * Atualiza o pace da horda no Redis.
+     * Usado pelo modo adaptativo para refletir a performance média atual dos usuários.
+     */
+    fun updateHordePace(sessionId: String, pace: Double) {
+        redis.opsForValue().set(hordeKey(sessionId), pace.toString(), Duration.ofHours(24))
     }
 
     /**
@@ -93,5 +111,6 @@ class LeaderboardRedisService(
         redis.expire(leaderboardKey(sessionId), ttl)
         redis.expire(startKey(sessionId), ttl)
         redis.expire(hordeKey(sessionId), ttl)
+        redis.expire(hordeAdaptiveKey(sessionId), ttl)
     }
 }

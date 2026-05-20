@@ -9,6 +9,11 @@ data class UserResponseDto(
     val name: String,
     val birthdayDate: LocalDate?,
     val maxHeartRate: Int?,
-    val height: Double?,
-    val weight: Double?
-)
+    var height: Double?,
+    var weight: Double?
+) {
+    init {
+        height = height?.let { Math.round(it * 100) / 100.0 }
+        weight = weight?.let { Math.round(it * 100) / 100.0 }
+    }
+}

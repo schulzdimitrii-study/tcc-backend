@@ -24,6 +24,9 @@ class Horde(
 
     val targetPace: Double? = null,
 
+    @Column(nullable = false)
+    val isAdaptive: Boolean = false,
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "horde_id", nullable = true)
     val parentHorde: Horde? = null
