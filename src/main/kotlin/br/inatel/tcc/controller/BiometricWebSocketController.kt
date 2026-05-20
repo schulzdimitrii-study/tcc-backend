@@ -3,6 +3,7 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.dto.BiometricDataMessage
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.LeaderboardResponse
+import br.inatel.tcc.service.BiometricPersistenceService
 import br.inatel.tcc.service.HordePositionService
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
@@ -26,11 +27,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
  *
  * Cada operação Redis neste handler leva < 1ms → latência total do handler < 10ms.
  *
- * TODO [FASE 3 - PERSISTÊNCIA BIOMÉTRICA]: Persistir cada BiometricDataMessage no PostgreSQL
- *   de forma assíncrona usando @Async (Spring) ou uma fila em memória (ArrayBlockingQueue)
- *   para não bloquear o fluxo WebSocket. Criar BiometricData entity e associar ao TrainSession.
- *   Referência: domain/biometricdata/BiometricData.kt + BiometricDataRepository
- *
  * TODO [FASE 4 - ZONA CARDÍACA]: Após calcular a zona cardíaca (CardiacZone.kt),
  *   incluí-la no LeaderboardResponse para que o app exiba o ícone de intensidade
  *   de cada competidor em tempo real.
@@ -43,7 +39,8 @@ class BiometricWebSocketController(
     private val leaderboardRedisService: LeaderboardRedisService,
     private val hordePositionService: HordePositionService,
     private val messagingTemplate: SimpMessagingTemplate,
-    private val validator: Validator
+    private val validator: Validator,
+    private val biometricPersistenceService: BiometricPersistenceService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -60,6 +57,9 @@ class BiometricWebSocketController(
 
         val start = System.currentTimeMillis()
 
+        // Persiste no PostgreSQL de forma assíncrona — não bloqueia o handler
+        biometricPersistenceService.persistAsync(message)
+
         sessionRedisService.saveUserState(message.sessionId, message.userId, message)
         leaderboardRedisService.updateUserDistance(message.sessionId, message.userId, message.accumulatedDistance)
 
@@ -72,6 +72,15 @@ class BiometricWebSocketController(
                     distanceKm = tuple.score ?: 0.0
                 )
             } ?: emptyList()
+
+        // Horda adaptativa: atualiza o pace no Redis com a média dos usuários ativos
+        if (leaderboardRedisService.isHordeAdaptive(message.sessionId) && entries.isNotEmpty()) {
+            val activeUserIds = entries.map { it.userId }
+            val avgPace = sessionRedisService.getAveragePace(message.sessionId, activeUserIds)
+            if (avgPace != null && avgPace > 0) {
+                leaderboardRedisService.updateHordePace(message.sessionId, avgPace)
+            }
+        }
 
         val startEpoch = leaderboardRedisService.getSessionStartEpoch(message.sessionId)
         val hordePace = leaderboardRedisService.getHordePace(message.sessionId)
