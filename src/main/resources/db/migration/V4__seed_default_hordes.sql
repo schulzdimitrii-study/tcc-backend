@@ -1,5 +1,5 @@
 -- V4: Hordas padrao disponiveis para selecao no app
--- IDs fixos deixam o seed idempotente e facilitam testes/integracoes.
+-- IDs fixos facilitam testes/integracoes e referencias pelo app.
 
 INSERT INTO hordes (
     id,
@@ -40,5 +40,4 @@ INSERT INTO hordes (
         5.0,
         FALSE,
         NULL
-    )
-ON CONFLICT (id) DO NOTHING;
+    );
