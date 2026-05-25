@@ -5,14 +5,14 @@ package br.inatel.tcc.dto
  * /topic/session/{sessionId}/leaderboard após cada update de biometria.
  *
  * O app React Native usa esse payload para atualizar a UI de corrida em tempo real.
- *
- * TODO [FASE 4 - AMIGOS]: Adicionar campo isBehindHorde (Boolean) e
- * distanceToHorde (Double) para facilitar a exibição no mapa do app.
  */
 data class LeaderboardResponse(
     val sessionId: String,
     val userRank: Int,
     // null quando a sessão não está associada a uma Horda (treino livre)
     val hordeVirtualDistanceKm: Double?,
-    val entries: List<LeaderboardEntryDto>
+    val entries: List<LeaderboardEntryDto>,
+    // null quando não há horda; negativo = usuário à frente da horda
+    val isBehindHorde: Boolean? = null,
+    val distanceToHorde: Double? = null
 )
