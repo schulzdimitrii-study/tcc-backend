@@ -12,6 +12,10 @@ pipeline {
         PIPELINE_NAME = 'TCC Backend — CI/CD Pipeline'
         DO_SSH_CREDS  = credentials('do-ssh-credentials')
         MAIL_CREDS    = credentials('mail-credentials')
+        
+        DO_HOST       = credentials('do-host')
+        DO_USERNAME   = credentials('do-username')
+        PROJECT_PATH  = credentials('project-path')
     }
 
     stages {
