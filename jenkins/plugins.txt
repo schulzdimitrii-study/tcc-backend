@@ -1,0 +1,11 @@
+git:latest
+github:latest
+maven-plugin:latest
+configuration-as-code:latest
+workflow-aggregator:latest
+pipeline-stage-view:latest
+pipeline-utility-steps:latest
+ssh-agent:latest
+docker-workflow:latest
+mailer:latest
+email-ext:latest

@@ -22,4 +22,7 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg \
 
 RUN groupadd -f docker && usermod -aG docker jenkins
 
+COPY jenkins/plugins.txt /usr/share/jenkins/ref/plugins.txt
+RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
+
 USER jenkins
