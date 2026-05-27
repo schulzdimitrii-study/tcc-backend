@@ -10,9 +10,8 @@ pipeline {
 
     environment {
         PIPELINE_NAME = 'TCC Backend — CI/CD Pipeline'
-        // Define these credentials in Jenkins (Credentials Manager)
-        DO_SSH_CREDS  = credentials('do-ssh-credentials') // Contains SSH key/username
-        MAIL_CREDS    = credentials('mail-credentials')    // Username/password for SMTP
+        DO_SSH_CREDS  = credentials('do-ssh-credentials')
+        MAIL_CREDS    = credentials('mail-credentials')
     }
 
     stages {
