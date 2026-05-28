@@ -8,6 +8,10 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    triggers {
+        githubPush()
+    }
+
     environment {
         PIPELINE_NAME = 'TCC Backend — CI/CD Pipeline'
         DO_SSH_CREDS  = credentials('do-ssh-credentials')
