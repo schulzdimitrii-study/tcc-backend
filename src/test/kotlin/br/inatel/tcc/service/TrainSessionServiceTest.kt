@@ -166,7 +166,25 @@ class TrainSessionServiceTest {
 
         verify(rankingRepository, times(2)).save(any())
         verify(trainSessionRepository).save(any<TrainSession>())
+        verify(leaderboardRedisService).incrementGlobalScore(any(), eq(userId.toString()), eq(5.0))
+        verify(leaderboardRedisService).incrementGlobalScore(any(), eq(user2Id.toString()), eq(3.0))
         verify(leaderboardRedisService).expireSessionKeys(sessionId.toString())
+    }
+
+    @Test
+    fun shouldNotIncrementGlobalScore_forZeroDistance() {
+        val sess = buildSession()
+        val leaderboard = linkedSetOf(DefaultTypedTuple(userId.toString(), 0.0))
+
+        whenever(trainSessionRepository.findById(sessionId)).thenReturn(Optional.of(sess))
+        whenever(leaderboardRedisService.getFullLeaderboard(sessionId.toString())).thenReturn(leaderboard)
+        whenever(userRepository.findById(userId)).thenReturn(Optional.of(buildUser()))
+        whenever(rankingRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(trainSessionRepository.save(any())).thenAnswer { it.arguments[0] }
+
+        service.endSession(sessionId.toString())
+
+        verify(leaderboardRedisService, never()).incrementGlobalScore(any(), any(), any())
     }
 
     @Test
@@ -243,6 +261,36 @@ class TrainSessionServiceTest {
         service.endSession(sessionId.toString())
 
         verify(messagingTemplate, never()).convertAndSend(any<String>(), any<Any>())
+    }
+
+    // ─── getGlobalRanking ─────────────────────────────────────────────────────
+
+    @Test
+    fun shouldReturnGlobalRanking_forPeriod() {
+        val user1Id = UUID.randomUUID()
+        val user2Id = UUID.randomUUID()
+        val entries = linkedSetOf(
+            DefaultTypedTuple(user1Id.toString(), 12.5),
+            DefaultTypedTuple(user2Id.toString(), 8.0)
+        )
+        whenever(leaderboardRedisService.getGlobalRanking("2026-05")).thenReturn(entries)
+
+        val result = service.getGlobalRanking("2026-05")
+
+        assertEquals(2, result.size)
+        assertEquals(1, result[0].rank)
+        assertEquals(12.5, result[0].totalDistanceKm)
+        assertEquals(2, result[1].rank)
+        assertEquals(8.0, result[1].totalDistanceKm)
+    }
+
+    @Test
+    fun shouldReturnEmptyList_whenNoGlobalRanking() {
+        whenever(leaderboardRedisService.getGlobalRanking("2026-05")).thenReturn(null)
+
+        val result = service.getGlobalRanking("2026-05")
+
+        assertEquals(emptyList<Any>(), result)
     }
 
     // ─── getAllHordes ─────────────────────────────────────────────────────────

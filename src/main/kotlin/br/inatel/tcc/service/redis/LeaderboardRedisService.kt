@@ -19,9 +19,6 @@ import java.time.Duration
  *   - ZREVRANK retorna o rank do usuário em O(log N) sem varrer a lista inteira
  *   - ZREVRANGE retorna os top-N com scores em O(log N + N), ideal para top 10
  *
- * TODO [FASE 5 - RANKING GLOBAL]: Além do leaderboard por sessão, manter
- *   ZSET ranking:global:{yyyy-MM} com score acumulado por período mensal.
- *   Atualizar via ZADD com flag INCR ao encerrar cada sessão.
  */
 @Service
 class LeaderboardRedisService(
@@ -33,6 +30,7 @@ class LeaderboardRedisService(
     private fun hordeKey(sessionId: String) = "session:$sessionId:horde:pace"
     private fun hordeAdaptiveKey(sessionId: String) = "session:$sessionId:horde:adaptive"
     private fun goalDistanceKey(sessionId: String) = "session:$sessionId:goal:distance"
+    private fun globalRankingKey(period: String) = "ranking:global:$period"
 
     fun initSession(
         sessionId: String,
@@ -93,6 +91,16 @@ class LeaderboardRedisService(
 
     fun getHordePace(sessionId: String): Double? {
         return redis.opsForValue().get(hordeKey(sessionId))?.toDouble()
+    }
+
+    fun incrementGlobalScore(period: String, userId: String, distanceKm: Double) {
+        val key = globalRankingKey(period)
+        redis.opsForZSet().incrementScore(key, userId, distanceKm)
+        redis.expire(key, Duration.ofDays(90))
+    }
+
+    fun getGlobalRanking(period: String, count: Long = 50): Set<ZSetOperations.TypedTuple<String>>? {
+        return redis.opsForZSet().reverseRangeWithScores(globalRankingKey(period), 0, count - 1)
     }
 
     fun expireSessionKeys(sessionId: String) {
