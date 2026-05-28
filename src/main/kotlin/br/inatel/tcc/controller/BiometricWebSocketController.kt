@@ -141,7 +141,7 @@ class BiometricWebSocketController(
             raceProgress = raceProgress,
             gameStatus = gameStatus
         )
-        messagingTemplate.convertAndSend("/topic/session/${message.sessionId}/user/${message.userId}/game-state", gameStateResponse)
+        messagingTemplate.convertAndSend("/topic/session/${message.sessionId}/game-state", gameStateResponse)
 
         val elapsed = System.currentTimeMillis() - start
         log.info(

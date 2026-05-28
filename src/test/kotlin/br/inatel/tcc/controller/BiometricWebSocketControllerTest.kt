@@ -241,7 +241,7 @@ class BiometricWebSocketControllerTest {
         controller.receiveBiometricData(message)
 
         verify(messagingTemplate).convertAndSend(
-            eq("/topic/session/$sessionId/user/$userId/game-state"),
+            eq("/topic/session/$sessionId/game-state"),
             captor.capture()
         )
         val state = captor.firstValue
@@ -268,7 +268,7 @@ class BiometricWebSocketControllerTest {
         controller.receiveBiometricData(message)
 
         verify(messagingTemplate).convertAndSend(
-            eq("/topic/session/$sessionId/user/$userId/game-state"),
+            eq("/topic/session/$sessionId/game-state"),
             captor.capture()
         )
         val state = captor.firstValue
@@ -288,7 +288,7 @@ class BiometricWebSocketControllerTest {
         controller.receiveBiometricData(message)
 
         verify(messagingTemplate).convertAndSend(
-            eq("/topic/session/$sessionId/user/$userId/game-state"),
+            eq("/topic/session/$sessionId/game-state"),
             captor.capture()
         )
         val state = captor.firstValue
