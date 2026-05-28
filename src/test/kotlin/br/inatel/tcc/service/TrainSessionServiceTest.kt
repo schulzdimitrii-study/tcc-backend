@@ -71,9 +71,9 @@ class TrainSessionServiceTest {
         val response = service.startSession("test@example.com", StartSessionRequest(trainType = "RUN"))
 
         assertNotNull(response.sessionId)
-        verify(leaderboardRedisService).initSession(sessionId.toString(), null)
+        verify(leaderboardRedisService).initSession(sessionId.toString(), null, false, null)
     }
-
+ 
     @Test
     fun shouldStartSessionWithHorde() {
         val hordeId = UUID.randomUUID()
@@ -86,13 +86,13 @@ class TrainSessionServiceTest {
         whenever(hordeRepository.findById(hordeId)).thenReturn(Optional.of(horde))
         whenever(trainSessionRepository.save(any())).thenReturn(savedSession)
         whenever(hordePositionService.resolveEffectivePace(horde)).thenReturn(6.0)
-
+ 
         val response = service.startSession("test@example.com", StartSessionRequest(hordeId = hordeId))
-
+ 
         assertNotNull(response.sessionId)
-        verify(leaderboardRedisService).initSession(sessionId.toString(), 6.0)
+        verify(leaderboardRedisService).initSession(sessionId.toString(), 6.0, false, 60)
     }
-
+ 
     @Test
     fun shouldInheritParentPace_forSubHordeWithoutOwnPace() {
         val parentId = UUID.randomUUID()
@@ -104,10 +104,10 @@ class TrainSessionServiceTest {
         whenever(hordeRepository.findById(subHordeId)).thenReturn(Optional.of(subHorde))
         whenever(trainSessionRepository.save(any())).thenReturn(savedSession)
         whenever(hordePositionService.resolveEffectivePace(subHorde)).thenReturn(5.0)
-
+ 
         service.startSession("test@example.com", StartSessionRequest(hordeId = subHordeId))
-
-        verify(leaderboardRedisService).initSession(sessionId.toString(), 5.0)
+ 
+        verify(leaderboardRedisService).initSession(sessionId.toString(), 5.0, false, 30)
     }
 
     @Test

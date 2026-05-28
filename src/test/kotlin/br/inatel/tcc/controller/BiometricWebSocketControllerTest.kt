@@ -24,6 +24,8 @@ import org.mockito.kotlin.whenever
 import org.springframework.data.redis.core.DefaultTypedTuple
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import br.inatel.tcc.dto.LeaderboardResponse
+import br.inatel.tcc.dto.GameStateResponse
+import br.inatel.tcc.dto.GameStatus
 
 @ExtendWith(MockitoExtension::class)
 class BiometricWebSocketControllerTest {
@@ -37,6 +39,11 @@ class BiometricWebSocketControllerTest {
     @Mock private lateinit var cardiacZoneService: CardiacZoneService
 
     @InjectMocks private lateinit var controller: BiometricWebSocketController
+
+    @org.junit.jupiter.api.BeforeEach
+    fun setUp() {
+        org.mockito.Mockito.lenient().`when`(leaderboardRedisService.getGoalDistance(any())).thenReturn(null)
+    }
 
     private val sessionId = "session-abc"
     private val userId = "user-123"
@@ -219,6 +226,73 @@ class BiometricWebSocketControllerTest {
         controller.receiveBiometricData(message)
 
         verify(messagingTemplate, never()).convertAndSend(any<String>(), any<LeaderboardResponse>())
+    }
+
+    @Test
+    fun shouldBroadcastGameStateWithCorrectDetails() {
+        val message = buildMessage(distance = 2.0)
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.getGoalDistance(sessionId)).thenReturn(10.0)
+        whenever(leaderboardRedisService.getSessionStartEpoch(sessionId)).thenReturn(1000L)
+        whenever(leaderboardRedisService.getHordePace(sessionId)).thenReturn(6.0)
+        whenever(hordePositionService.calculateVirtualPosition(any(), any())).thenReturn(1.0)
+
+        val captor = argumentCaptor<GameStateResponse>()
+        controller.receiveBiometricData(message)
+
+        verify(messagingTemplate).convertAndSend(
+            eq("/topic/session/$sessionId/game-state"),
+            captor.capture()
+        )
+        val state = captor.firstValue
+        org.junit.jupiter.api.Assertions.assertEquals(2.0, state.playerPosition)
+        org.junit.jupiter.api.Assertions.assertEquals(1.0, state.hordePosition)
+        org.junit.jupiter.api.Assertions.assertEquals(8.0, state.distanceToGoal)
+        org.junit.jupiter.api.Assertions.assertEquals(1.0, state.distancePlayerToHorde)
+        org.junit.jupiter.api.Assertions.assertEquals(10.0, state.playerSpeed)
+        org.junit.jupiter.api.Assertions.assertEquals(10.0, state.hordeSpeed)
+        org.junit.jupiter.api.Assertions.assertEquals(20.0, state.raceProgress)
+        org.junit.jupiter.api.Assertions.assertEquals(GameStatus.RUNNING, state.gameStatus)
+    }
+
+    @Test
+    fun shouldBroadcastGameStateWhenCaught() {
+        val message = buildMessage(distance = 1.0)
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.getGoalDistance(sessionId)).thenReturn(10.0)
+        whenever(leaderboardRedisService.getSessionStartEpoch(sessionId)).thenReturn(1000L)
+        whenever(leaderboardRedisService.getHordePace(sessionId)).thenReturn(6.0)
+        whenever(hordePositionService.calculateVirtualPosition(any(), any())).thenReturn(1.5)
+
+        val captor = argumentCaptor<GameStateResponse>()
+        controller.receiveBiometricData(message)
+
+        verify(messagingTemplate).convertAndSend(
+            eq("/topic/session/$sessionId/game-state"),
+            captor.capture()
+        )
+        val state = captor.firstValue
+        org.junit.jupiter.api.Assertions.assertEquals(GameStatus.CAUGHT, state.gameStatus)
+    }
+
+    @Test
+    fun shouldBroadcastGameStateWhenEscaped() {
+        val message = buildMessage(distance = 10.5)
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.getGoalDistance(sessionId)).thenReturn(10.0)
+        whenever(leaderboardRedisService.getSessionStartEpoch(sessionId)).thenReturn(1000L)
+        whenever(leaderboardRedisService.getHordePace(sessionId)).thenReturn(6.0)
+        whenever(hordePositionService.calculateVirtualPosition(any(), any())).thenReturn(5.0)
+
+        val captor = argumentCaptor<GameStateResponse>()
+        controller.receiveBiometricData(message)
+
+        verify(messagingTemplate).convertAndSend(
+            eq("/topic/session/$sessionId/game-state"),
+            captor.capture()
+        )
+        val state = captor.firstValue
+        org.junit.jupiter.api.Assertions.assertEquals(GameStatus.ESCAPED, state.gameStatus)
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

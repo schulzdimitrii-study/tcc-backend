@@ -3,6 +3,8 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.dto.BiometricDataMessage
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.LeaderboardResponse
+import br.inatel.tcc.dto.GameStateResponse
+import br.inatel.tcc.dto.GameStatus
 import br.inatel.tcc.service.BiometricPersistenceService
 import br.inatel.tcc.service.CardiacZoneService
 import br.inatel.tcc.service.HordePositionService
@@ -109,6 +111,37 @@ class BiometricWebSocketController(
             distanceToHorde = distanceToHorde
         )
         messagingTemplate.convertAndSend("/topic/session/${message.sessionId}/leaderboard", response)
+
+        val goalDistance = leaderboardRedisService.getGoalDistance(message.sessionId) ?: 0.0
+        val hordePosition = hordeVirtualDistance ?: 0.0
+        val playerPosition = message.accumulatedDistance
+        val distanceToGoal = if (goalDistance > 0.0) kotlin.math.max(0.0, goalDistance - playerPosition) else 0.0
+        val distancePlayerToHorde = kotlin.math.abs(playerPosition - hordePosition)
+        val playerSpeed = message.speed
+        val hordeSpeed = if (hordePace != null && hordePace > 0.0) 60.0 / hordePace else 0.0
+        val raceProgress = if (goalDistance > 0.0) kotlin.math.min(100.0, (playerPosition / goalDistance) * 100.0) else 0.0
+
+        val gameStatus = if (hordeVirtualDistance != null && hordeVirtualDistance >= playerPosition) {
+            GameStatus.CAUGHT
+        } else if (goalDistance > 0.0 && playerPosition >= goalDistance) {
+            GameStatus.ESCAPED
+        } else {
+            GameStatus.RUNNING
+        }
+
+        val gameStateResponse = GameStateResponse(
+            sessionId = message.sessionId,
+            userId = message.userId,
+            playerPosition = playerPosition,
+            hordePosition = hordePosition,
+            distanceToGoal = distanceToGoal,
+            distancePlayerToHorde = distancePlayerToHorde,
+            playerSpeed = playerSpeed,
+            hordeSpeed = hordeSpeed,
+            raceProgress = raceProgress,
+            gameStatus = gameStatus
+        )
+        messagingTemplate.convertAndSend("/topic/session/${message.sessionId}/game-state", gameStateResponse)
 
         val elapsed = System.currentTimeMillis() - start
         log.info(

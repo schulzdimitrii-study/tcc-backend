@@ -79,7 +79,8 @@ class TrainSessionService(
         leaderboardRedisService.initSession(
             sessionId,
             horde?.let { hordePositionService.resolveEffectivePace(it) },
-            horde?.isAdaptive ?: false
+            horde?.isAdaptive ?: false,
+            horde?.estimatedDuration
         )
 
         return StartSessionResponse(sessionId = sessionId)
