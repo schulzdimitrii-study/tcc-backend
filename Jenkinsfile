@@ -4,7 +4,6 @@ pipeline {
     options {
         timeout(time: 30, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
-        timestamps()
         disableConcurrentBuilds()
     }
 
@@ -35,24 +34,28 @@ pipeline {
                 stage('Run Tests') {
                     steps {
                         sh 'docker run -d --name redis-tests -p 6379:6379 redis:7-alpine'
-                        try {
-                            echo "Running unit tests..."
-                            sh './mvnw clean test'
-                        } finally {
-                            sh 'docker stop redis-tests && docker rm redis-tests'
+                        script {
+                            try {
+                                echo "Running unit tests..."
+                                sh './mvnw clean test'
+                            } finally {
+                                sh 'docker stop redis-tests && docker rm redis-tests'
+                            }
                         }
                     }
                 }
                 stage('Code Coverage') {
                     steps {
                         sh 'docker run -d --name redis-coverage -p 6379:6379 redis:7-alpine'
-                        try {
-                            echo "Running coverage tests with JaCoCo..."
-                            sh './mvnw clean verify'
-                            echo "Archiving JaCoCo report..."
-                            archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
-                        } finally {
-                            sh 'docker stop redis-coverage && docker rm redis-coverage'
+                        script {
+                            try {
+                                echo "Running coverage tests with JaCoCo..."
+                                sh './mvnw clean verify'
+                                echo "Archiving JaCoCo report..."
+                                archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
+                            } finally {
+                                sh 'docker stop redis-coverage && docker rm redis-coverage'
+                            }
                         }
                     }
                 }
