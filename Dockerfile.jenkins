@@ -25,4 +25,4 @@ RUN groupadd -f docker && usermod -aG docker jenkins
 COPY jenkins/plugins.txt /usr/share/jenkins/ref/plugins.txt
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
-USER jenkins
+EXPOSE 8082 50000
