@@ -76,6 +76,18 @@ services:
       timeout: 5s
       retries: 5
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    command:
+      - "http"
+      - "jenkins:8080"
+      - "--domain=contrite-emu-thicken.ngrok-free.dev"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    depends_on:
+      - jenkins
+
 volumes:
   postgres_data:
   redis_data:
