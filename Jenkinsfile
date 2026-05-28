@@ -83,30 +83,67 @@ pipeline {
                 def mailTo = "${env.EMAIL_ADDRESSES_LIST}"
                 def subject = ""
                 def body = ""
+
+                def commitHash = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                def commitAuthor = sh(script: 'git log -1 --pretty=%an', returnStdout: true).trim()
+                def commitMsg = sh(script: 'git log -1 --pretty=%B', returnStdout: true).trim()
+                def buildDuration = currentBuild.durationString.replace(' and no more', '')
+                
+                def isDeploy = (env.BRANCH_NAME == 'main') ? "🚀 SIM — Implantado no Droplet (DigitalOcean)" : "NÃO — Deploy apenas na branch main"
                 
                 if (currentBuild.currentResult == 'SUCCESS') {
-                    subject = "✅ CI Passed — ${env.JOB_NAME} (${env.BRANCH_NAME})"
+                    subject = "✅ Pipeline Sucesso: ${env.JOB_NAME} [${env.BRANCH_NAME}]"
                     body = """
-                        ✅ CI pipeline completed successfully!
-
-                        Repository : ${env.JOB_NAME}
-                        Branch     : ${env.BRANCH_NAME}
-                        Build      : #${env.BUILD_NUMBER}
-                        Result     : ${currentBuild.currentResult}
-
-                        View run: ${env.BUILD_URL}
+                        CI/CD Pipeline executado com sucesso!
+                        --------------------------------------------------
+                        Projeto:          ${env.PIPELINE_NAME}
+                        Job:              ${env.JOB_NAME}
+                        Branch:           ${env.BRANCH_NAME}
+                        Build:            #${env.BUILD_NUMBER}
+                        Duração:          ${buildDuration}
+                        
+                        Detalhes do Commit:
+                        - Hash:           ${commitHash}
+                        - Autor:          ${commitAuthor}
+                        - Mensagem:       ${commitMsg}
+                        
+                        Deploy:
+                        - Status:         ${isDeploy}
+                        
+                        LINKS ÚTEIS
+                        --------------------------------------------------
+                        📋 Ver build no Jenkins   : ${env.BUILD_URL}
+                        📊 Relatório de Cobertura  : ${env.BUILD_URL}artifact/target/site/jacoco/index.html
+                        --------------------------------------------------
+                        Mensagem automática gerada pelo pipeline de CI/CD
+                        Projeto de TCC - INATEL – Gamificação e biofeedback em atividades físicas
                     """.stripIndent()
                 } else {
-                    subject = "❌ CI Failed — ${env.JOB_NAME} (${env.BRANCH_NAME})"
+                    subject = "❌ Pipeline Falhou: ${env.JOB_NAME} [${env.BRANCH_NAME}]"
                     body = """
-                        ❌ CI pipeline failed!
-
-                        Repository : ${env.JOB_NAME}
-                        Branch     : ${env.BRANCH_NAME}
-                        Build      : #${env.BUILD_NUMBER}
-                        Result     : ${currentBuild.currentResult}
-
-                        View run: ${env.BUILD_URL}
+                        CI/CD Pipeline falhou durante a execução!
+                        --------------------------------------------------
+                        Projeto:          ${env.PIPELINE_NAME}
+                        Job:              ${env.JOB_NAME}
+                        Branch:           ${env.BRANCH_NAME}
+                        Build:            #${env.BUILD_NUMBER}
+                        Duração:          ${buildDuration}
+                        
+                        Detalhes do Commit:
+                        - Hash:           ${commitHash}
+                        - Autor:          ${commitAuthor}
+                        - Mensagem:       ${commitMsg}
+                        
+                        Deploy:
+                        - Status:         ${isDeploy}
+                        
+                        LINKS ÚTEIS
+                        --------------------------------------------------
+                        📋 Ver build no Jenkins:   ${env.BUILD_URL}
+                        📊 Relatório de Cobertura  : ${env.BUILD_URL}artifact/target/site/jacoco/index.html
+                        --------------------------------------------------
+                        Mensagem automática gerada pelo pipeline de CI/CD
+                        Projeto de TCC - INATEL - Gamificação e biofeedback em atividades físicas
                     """.stripIndent()
                 }
                 
