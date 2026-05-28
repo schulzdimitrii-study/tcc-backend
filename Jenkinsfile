@@ -33,6 +33,7 @@ pipeline {
             parallel {
                 stage('Run Tests') {
                     steps {
+                        sh 'docker rm -f redis-tests || true'
                         sh 'docker run -d --name redis-tests -p 6380:6379 redis:7-alpine'
                         script {
                             try {
@@ -46,6 +47,7 @@ pipeline {
                 }
                 stage('Code Coverage') {
                     steps {
+                        sh 'docker rm -f redis-coverage || true'
                         sh 'docker run -d --name redis-coverage -p 6381:6379 redis:7-alpine'
                         script {
                             try {
