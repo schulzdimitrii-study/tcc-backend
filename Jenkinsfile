@@ -19,6 +19,7 @@ pipeline {
         DO_HOST       = credentials('do-host')
         DO_USERNAME   = credentials('do-username')
         PROJECT_PATH  = credentials('project-path')
+        EMAIL_ADDRESSES_LIST = credentials('emails-list')
     }
 
     stages {
@@ -93,7 +94,7 @@ pipeline {
     post {
         always {
             script {
-                def mailTo = [EMAIL_ADDRESS]
+                def mailTo = ${EMAIL_ADDRESSES_LIST}
                 def subject = ""
                 def body = ""
                 
