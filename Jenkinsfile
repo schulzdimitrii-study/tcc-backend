@@ -69,7 +69,7 @@ pipeline {
                             cd ${PROJECT_PATH} &&
                             git pull origin main &&
                             docker-compose down &&
-                            docker-compose up -d --build
+                            docker-compose up -d --build api postgres redis
                         "
                     '''
                 }
