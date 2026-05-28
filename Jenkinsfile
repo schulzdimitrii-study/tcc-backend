@@ -31,35 +31,21 @@ pipeline {
         }
 
         stage('Tests & Coverage') {
-            parallel {
-                stage('Run Tests') {
-                    steps {
-                        sh 'docker rm -f redis-tests || true'
-                        sh 'docker run -d --name redis-tests -p 6380:6379 redis:7-alpine'
-                        script {
-                            try {
-                                echo "Running unit tests..."
-                                sh 'REDIS_PORT=6380 ./mvnw clean test'
-                            } finally {
-                                sh 'docker stop redis-tests && docker rm redis-tests'
-                            }
-                        }
-                    }
-                }
-                stage('Code Coverage') {
-                    steps {
-                        sh 'docker rm -f redis-coverage || true'
-                        sh 'docker run -d --name redis-coverage -p 6381:6379 redis:7-alpine'
-                        script {
-                            try {
-                                echo "Running coverage tests with JaCoCo..."
-                                sh 'REDIS_PORT=6381 ./mvnw clean verify'
-                                echo "Archiving JaCoCo report..."
-                                archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
-                            } finally {
-                                sh 'docker stop redis-coverage && docker rm redis-coverage'
-                            }
-                        }
+            steps {
+                sh 'docker rm -f redis-tests || true'
+                sh 'docker run -d --name redis-tests -p 6380:6379 redis:7-alpine'
+                script {
+                    try {
+                        echo "Cleaning target directory using Docker to avoid permission issues..."
+                        sh 'docker run --rm -v "$(pwd)":/app -w /app alpine rm -rf target'
+                        
+                        echo "Running unit and verification tests with JaCoCo..."
+                        sh 'REDIS_PORT=6380 ./mvnw clean verify'
+                        
+                        echo "Archiving JaCoCo report..."
+                        archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
+                    } finally {
+                        sh 'docker stop redis-tests && docker rm redis-tests'
                     }
                 }
             }
