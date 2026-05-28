@@ -10,6 +10,7 @@ import br.inatel.tcc.domain.trainsession.TrainType
 import br.inatel.tcc.domain.horde.HordeRepository
 import br.inatel.tcc.domain.user.User
 import br.inatel.tcc.domain.user.UserRepository
+import br.inatel.tcc.dto.GlobalRankingEntryDto
 import br.inatel.tcc.dto.HordeResponse
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.SessionResultNotification
@@ -129,6 +130,12 @@ class TrainSessionService(
             )
         )
 
+        finalLeaderboard?.forEach { entry ->
+            val entryUserId = entry.value ?: return@forEach
+            val distanceKm = entry.score ?: 0.0
+            if (distanceKm > 0) leaderboardRedisService.incrementGlobalScore(period, entryUserId, distanceKm)
+        }
+
         leaderboardRedisService.expireSessionKeys(sessionId)
 
         achievementService.verifyAndGrant(session.user, updatedSession, finalLeaderboard)
@@ -183,6 +190,17 @@ class TrainSessionService(
         val id = UUID.fromString(sessionId)
         return trainSessionRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Sessão não encontrada: $sessionId") }
+    }
+
+    fun getGlobalRanking(period: String): List<GlobalRankingEntryDto> {
+        val entries = leaderboardRedisService.getGlobalRanking(period) ?: return emptyList()
+        return entries.mapIndexed { index, tuple ->
+            GlobalRankingEntryDto(
+                userId = tuple.value ?: "",
+                rank = index + 1,
+                totalDistanceKm = tuple.score ?: 0.0
+            )
+        }
     }
 
     fun getAllHordes(): List<HordeResponse> {
