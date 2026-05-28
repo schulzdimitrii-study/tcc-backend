@@ -7,6 +7,8 @@ enum class GameStatus {
 }
 
 data class GameStateResponse(
+    val sessionId: String,
+    val userId: String,
     val playerPosition: Double,
     val hordePosition: Double,
     val distanceToGoal: Double,

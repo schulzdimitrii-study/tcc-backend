@@ -32,20 +32,19 @@ class LeaderboardRedisService(
     private fun startKey(sessionId: String) = "session:$sessionId:start"
     private fun hordeKey(sessionId: String) = "session:$sessionId:horde:pace"
     private fun hordeAdaptiveKey(sessionId: String) = "session:$sessionId:horde:adaptive"
+    private fun goalDistanceKey(sessionId: String) = "session:$sessionId:goal:distance"
 
-    /**
-     * Inicializa os metadados da sessão no Redis.
-     * Chamado uma vez no POST /sessions/iniciar, logo após criar o TrainSession no PostgreSQL.
-     *
-     * Usa verificação de existência para ser idempotente — reconexões não sobrescrevem o start.
-     */
-    fun initSession(sessionId: String, targetPaceMinPerKm: Double?, isAdaptive: Boolean = false) {
+    fun initSession(
+        sessionId: String,
+        targetPaceMinPerKm: Double?,
+        isAdaptive: Boolean = false,
+        estimatedDurationMin: Int? = null
+    ) {
         val startKey = startKey(sessionId)
         if (redis.hasKey(startKey) != true) {
             val epochSeconds = System.currentTimeMillis() / 1000
             redis.opsForValue().set(startKey, epochSeconds.toString(), Duration.ofHours(24))
 
-            // Armazena o pace da Horda para evitar busca no PostgreSQL a cada update de biometria
             targetPaceMinPerKm?.let {
                 redis.opsForValue().set(hordeKey(sessionId), it.toString(), Duration.ofHours(24))
             }
@@ -53,43 +52,37 @@ class LeaderboardRedisService(
             if (isAdaptive) {
                 redis.opsForValue().set(hordeAdaptiveKey(sessionId), "true", Duration.ofHours(24))
             }
+
+            if (targetPaceMinPerKm != null && targetPaceMinPerKm > 0 && estimatedDurationMin != null) {
+                val goalDistance = estimatedDurationMin.toDouble() / targetPaceMinPerKm
+                redis.opsForValue().set(goalDistanceKey(sessionId), goalDistance.toString(), Duration.ofHours(24))
+            }
         }
     }
 
-    /** Retorna true se a horda desta sessão está em modo adaptativo. */
+    fun getGoalDistance(sessionId: String): Double? {
+        return redis.opsForValue().get(goalDistanceKey(sessionId))?.toDouble()
+    }
+
     fun isHordeAdaptive(sessionId: String): Boolean =
         redis.opsForValue().get(hordeAdaptiveKey(sessionId)) == "true"
 
-    /**
-     * Atualiza o pace da horda no Redis.
-     * Usado pelo modo adaptativo para refletir a performance média atual dos usuários.
-     */
     fun updateHordePace(sessionId: String, pace: Double) {
         redis.opsForValue().set(hordeKey(sessionId), pace.toString(), Duration.ofHours(24))
     }
 
-    /**
-     * Atualiza a distância do usuário no leaderboard.
-     * ZADD sobrescreve o score anterior — sempre reflete a posição atual, não acumulada dupla.
-     */
     fun updateUserDistance(sessionId: String, userId: String, distanceKm: Double) {
         redis.opsForZSet().add(leaderboardKey(sessionId), userId, distanceKm)
     }
 
-    /**
-     * Retorna o rank 0-based do usuário (0 = primeiro lugar).
-     * ZREVRANK: ordena do maior score (maior distância) para o menor.
-     */
     fun getUserRank(sessionId: String, userId: String): Long? {
         return redis.opsForZSet().reverseRank(leaderboardKey(sessionId), userId)
     }
 
-    /** Retorna os top-N usuários com seus scores (ZREVRANGE WITHSCORES). */
     fun getTopEntries(sessionId: String, count: Long = 10): Set<ZSetOperations.TypedTuple<String>>? {
         return redis.opsForZSet().reverseRangeWithScores(leaderboardKey(sessionId), 0, count - 1)
     }
 
-    /** Retorna o leaderboard completo — usado no flush final para o PostgreSQL. */
     fun getFullLeaderboard(sessionId: String): Set<ZSetOperations.TypedTuple<String>>? {
         return redis.opsForZSet().reverseRangeWithScores(leaderboardKey(sessionId), 0, -1)
     }
@@ -102,15 +95,12 @@ class LeaderboardRedisService(
         return redis.opsForValue().get(hordeKey(sessionId))?.toDouble()
     }
 
-    /**
-     * Reduz o TTL dos keys da sessão para 1h após encerramento.
-     * Mantém dados disponíveis brevemente para consultas pós-corrida, sem ocupar memória indefinidamente.
-     */
     fun expireSessionKeys(sessionId: String) {
         val ttl = Duration.ofHours(1)
         redis.expire(leaderboardKey(sessionId), ttl)
         redis.expire(startKey(sessionId), ttl)
         redis.expire(hordeKey(sessionId), ttl)
         redis.expire(hordeAdaptiveKey(sessionId), ttl)
+        redis.expire(goalDistanceKey(sessionId), ttl)
     }
 }

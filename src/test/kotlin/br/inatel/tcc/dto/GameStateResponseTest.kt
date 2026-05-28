@@ -8,6 +8,8 @@ class GameStateResponseTest {
     @Test
     fun shouldCreateGameStateResponseWithCorrectValues() {
         val response = GameStateResponse(
+            sessionId = "session-abc",
+            userId = "user-123",
             playerPosition = 100.0,
             hordePosition = 50.0,
             distanceToGoal = 400.0,
@@ -18,6 +20,8 @@ class GameStateResponseTest {
             gameStatus = GameStatus.RUNNING
         )
 
+        assertEquals("session-abc", response.sessionId)
+        assertEquals("user-123", response.userId)
         assertEquals(100.0, response.playerPosition)
         assertEquals(50.0, response.hordePosition)
         assertEquals(400.0, response.distanceToGoal)
