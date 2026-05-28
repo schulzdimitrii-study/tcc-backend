@@ -80,7 +80,7 @@ pipeline {
     post {
         always {
             script {
-                def mailTo = ${EMAIL_ADDRESSES_LIST}
+                def mailTo = "${env.EMAIL_ADDRESSES_LIST}"
                 def subject = ""
                 def body = ""
                 
