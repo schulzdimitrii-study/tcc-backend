@@ -33,11 +33,11 @@ pipeline {
             parallel {
                 stage('Run Tests') {
                     steps {
-                        sh 'docker run -d --name redis-tests -p 6379:6379 redis:7-alpine'
+                        sh 'docker run -d --name redis-tests -p 6380:6379 redis:7-alpine'
                         script {
                             try {
                                 echo "Running unit tests..."
-                                sh './mvnw clean test'
+                                sh 'REDIS_PORT=6380 ./mvnw clean test'
                             } finally {
                                 sh 'docker stop redis-tests && docker rm redis-tests'
                             }
@@ -46,11 +46,11 @@ pipeline {
                 }
                 stage('Code Coverage') {
                     steps {
-                        sh 'docker run -d --name redis-coverage -p 6379:6379 redis:7-alpine'
+                        sh 'docker run -d --name redis-coverage -p 6381:6379 redis:7-alpine'
                         script {
                             try {
                                 echo "Running coverage tests with JaCoCo..."
-                                sh './mvnw clean verify'
+                                sh 'REDIS_PORT=6381 ./mvnw clean verify'
                                 echo "Archiving JaCoCo report..."
                                 archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
                             } finally {
