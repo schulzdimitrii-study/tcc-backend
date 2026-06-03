@@ -82,7 +82,7 @@ services:
     command:
       - "http"
       - "jenkins:8080"
-      - "--domain=contrite-emu-thicken.ngrok-free.dev"
+      - "--url=https://contrite-emu-thicken.ngrok-free.dev"
     environment:
       - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     depends_on:
