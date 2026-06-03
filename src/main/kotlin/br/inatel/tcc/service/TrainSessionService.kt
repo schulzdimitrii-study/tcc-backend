@@ -94,6 +94,7 @@ class TrainSessionService(
 
         val finalLeaderboard = leaderboardRedisService.getFullLeaderboard(sessionId)
         val period = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
+        val goalDistance = leaderboardRedisService.getGoalDistance(sessionId)
 
         finalLeaderboard?.forEachIndexed { index, entry ->
             val userId = UUID.fromString(entry.value ?: return@forEachIndexed)
@@ -106,7 +107,8 @@ class TrainSessionService(
                     position = index + 1,
                     score = distanceKm,
                     period = period,
-                    calculeDate = LocalDate.now()
+                    calculeDate = LocalDate.now(),
+                    targetDistance = goalDistance
                 )
             )
         }

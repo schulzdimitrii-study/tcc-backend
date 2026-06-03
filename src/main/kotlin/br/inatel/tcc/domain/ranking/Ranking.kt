@@ -26,5 +26,8 @@ class Ranking(
     val period: String = "",
 
     @Column(nullable = false)
-    val calculeDate: LocalDate = LocalDate.now()
+    val calculeDate: LocalDate = LocalDate.now(),
+
+    @Column(name = "target_distance", nullable = true)
+    val targetDistance: Double? = null
 )

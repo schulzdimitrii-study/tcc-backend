@@ -58,4 +58,19 @@ class RankingRepositoryTest {
         assertEquals(2, user1Rankings.size)
         assertTrue(user1Rankings.all { it.user.id == user1.id })
     }
+
+    @Test
+    fun shouldFindByPeriodAndTargetDistance() {
+        val user1 = savedUser("t1@test.com")
+        val user2 = savedUser("t2@test.com")
+
+        rankingRepository.save(Ranking(user = user1, position = 1, score = 10.0, period = "2026-06", calculeDate = LocalDate.now(), targetDistance = 5.0))
+        rankingRepository.save(Ranking(user = user2, position = 2, score = 9.0, period = "2026-06", calculeDate = LocalDate.now(), targetDistance = 10.0))
+
+        val results = rankingRepository.findByPeriodAndTargetDistanceOrderByPositionAsc("2026-06", 5.0)
+
+        assertEquals(1, results.size)
+        assertEquals(user1.id, results[0].user.id)
+        assertEquals(5.0, results[0].targetDistance)
+    }
 }

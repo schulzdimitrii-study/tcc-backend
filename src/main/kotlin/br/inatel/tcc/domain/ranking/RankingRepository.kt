@@ -5,5 +5,6 @@ import java.util.UUID
 
 interface RankingRepository : JpaRepository<Ranking, UUID> {
     fun findByPeriodOrderByPositionAsc(period: String): List<Ranking>
+    fun findByPeriodAndTargetDistanceOrderByPositionAsc(period: String, targetDistance: Double): List<Ranking>
     fun findByUserId(userId: UUID): List<Ranking>
 }

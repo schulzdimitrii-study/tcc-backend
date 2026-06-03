@@ -1,0 +1,1 @@
+ALTER TABLE rankings ADD COLUMN target_distance DOUBLE PRECISION;
