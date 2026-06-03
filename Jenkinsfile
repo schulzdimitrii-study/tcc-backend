@@ -65,8 +65,8 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ${DO_USERNAME}@${DO_HOST} "
                             cd ${PROJECT_PATH} &&
                             git fetch origin &&
-                            git checkout -B ${BRANCH_NAME} origin/${BRANCH_NAME} &&
-                            git pull origin ${BRANCH_NAME} &&
+                            git checkout -B main origin/main &&
+                            git pull origin main &&
                             docker-compose up -d --build api postgres redis
                         "
                     '''
