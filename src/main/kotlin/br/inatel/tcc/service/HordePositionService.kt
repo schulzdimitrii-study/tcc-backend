@@ -14,9 +14,9 @@ class HordePositionService {
     fun resolveEffectivePace(horde: Horde): Double? {
         val basePace = horde.targetPace ?: horde.parentHorde?.targetPace ?: return null
         return when (horde.difficulty) {
-            br.inatel.tcc.domain.horde.HordeDifficulty.EASY -> basePace * 1.2
-            br.inatel.tcc.domain.horde.HordeDifficulty.MEDIUM -> basePace * 1.0
-            br.inatel.tcc.domain.horde.HordeDifficulty.HARD -> basePace * 0.8
+            br.inatel.tcc.domain.horde.HordeDifficulty.EASY -> basePace * 8.0
+            br.inatel.tcc.domain.horde.HordeDifficulty.MEDIUM -> basePace * 6.0
+            br.inatel.tcc.domain.horde.HordeDifficulty.HARD -> basePace * 4.0
         }
     }
 }
