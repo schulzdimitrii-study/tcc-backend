@@ -1,5 +1,6 @@
 package br.inatel.tcc.controller
 
+import br.inatel.tcc.dto.GlobalRankingEntryDto
 import br.inatel.tcc.dto.HordeResponse
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
@@ -75,5 +76,14 @@ class TrainSessionController(
     ): ResponseEntity<List<HordeResponse>> {
         val hordes = trainSessionService.getAllHordes()
         return ResponseEntity.ok(hordes)
+    }
+
+    @Operation(summary = "Get global ranking for a period", responses = [ApiResponse(description = "Global ranking", content = [Content(mediaType = "application/json", schema = Schema(implementation = GlobalRankingEntryDto::class))])])
+    @GetMapping("/ranking/{period}")
+    fun getGlobalRanking(
+        @PathVariable period: String,
+        authentication: Authentication
+    ): ResponseEntity<List<GlobalRankingEntryDto>> {
+        return ResponseEntity.ok(trainSessionService.getGlobalRanking(period))
     }
 }

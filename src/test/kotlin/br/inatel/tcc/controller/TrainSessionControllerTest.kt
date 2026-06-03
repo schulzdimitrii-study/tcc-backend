@@ -3,6 +3,7 @@ package br.inatel.tcc.controller
 import br.inatel.tcc.domain.trainsession.TrainSession
 import br.inatel.tcc.domain.trainsession.TrainType
 import br.inatel.tcc.domain.user.User
+import br.inatel.tcc.dto.GlobalRankingEntryDto
 import br.inatel.tcc.dto.HordeResponse
 import br.inatel.tcc.dto.LeaderboardEntryDto
 import br.inatel.tcc.dto.StartSessionRequest
@@ -171,6 +172,36 @@ class TrainSessionControllerTest {
         assertEquals(1, response.body?.size)
         assertEquals("Horde 1", response.body?.first()?.name)
         verify(trainSessionService).getAllHordes()
+    }
+
+    // ─── GET /sessions/ranking/{period} ──────────────────────────────────────
+
+    @Test
+    fun getGlobalRanking_shouldReturn200WithEntries() {
+        val principal = mockAuthentication("user@example.com")
+        val entries = listOf(
+            GlobalRankingEntryDto(userId = "user-1", rank = 1, totalDistanceKm = 42.0),
+            GlobalRankingEntryDto(userId = "user-2", rank = 2, totalDistanceKm = 30.5)
+        )
+        whenever(trainSessionService.getGlobalRanking("2026-05")).thenReturn(entries)
+
+        val response = controller.getGlobalRanking("2026-05", principal)
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals(2, response.body?.size)
+        assertEquals(1, response.body?.first()?.rank)
+        assertEquals(42.0, response.body?.first()?.totalDistanceKm)
+    }
+
+    @Test
+    fun getGlobalRanking_shouldReturnEmptyList_whenNone() {
+        val principal = mockAuthentication("user@example.com")
+        whenever(trainSessionService.getGlobalRanking("2026-05")).thenReturn(emptyList())
+
+        val response = controller.getGlobalRanking("2026-05", principal)
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals(0, response.body?.size)
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

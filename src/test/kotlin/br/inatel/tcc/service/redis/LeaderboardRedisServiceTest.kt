@@ -149,6 +149,34 @@ class LeaderboardRedisServiceTest {
         assertEquals(6.5, pace)
     }
 
+    // ─── incrementGlobalScore ─────────────────────────────────────────────────
+
+    @Test
+    fun shouldIncrementGlobalScore() {
+        val globalKey = "ranking:global:2026-05"
+
+        service.incrementGlobalScore("2026-05", "user-1", 5.0)
+
+        verify(zSetOps).incrementScore(globalKey, "user-1", 5.0)
+        verify(redis).expire(eq(globalKey), eq(Duration.ofDays(90)))
+    }
+
+    // ─── getGlobalRanking ─────────────────────────────────────────────────────
+
+    @Test
+    fun shouldGetGlobalRanking_defaultCount50() {
+        service.getGlobalRanking("2026-05")
+
+        verify(zSetOps).reverseRangeWithScores("ranking:global:2026-05", 0L, 49L)
+    }
+
+    @Test
+    fun shouldGetGlobalRanking_withCustomCount() {
+        service.getGlobalRanking("2026-05", count = 10)
+
+        verify(zSetOps).reverseRangeWithScores("ranking:global:2026-05", 0L, 9L)
+    }
+
     // ─── expireSessionKeys ────────────────────────────────────────────────────
 
     @Test
