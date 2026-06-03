@@ -52,9 +52,6 @@ pipeline {
         }
 
         stage('Deploy') {
-            when {
-                branch 'main'
-            }
             steps {
                 echo "Building production JAR..."
                 sh './mvnw clean package -DskipTests'
