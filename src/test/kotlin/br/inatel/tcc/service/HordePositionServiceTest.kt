@@ -56,15 +56,15 @@ class HordePositionServiceTest {
     // ─── resolveEffectivePace ─────────────────────────────────────────────────
 
     @Test
-    fun shouldReturn8_whenDifficultyIsEasy() {
+    fun shouldReturn10_whenDifficultyIsEasy() {
         val horde = Horde(name = "Easy Test", difficulty = HordeDifficulty.EASY, estimatedDuration = 30)
-        assertEquals(8.0, service.resolveEffectivePace(horde))
+        assertEquals(10.0, service.resolveEffectivePace(horde))
     }
 
     @Test
-    fun shouldReturn6_whenDifficultyIsMedium() {
+    fun shouldReturn8_whenDifficultyIsMedium() {
         val horde = Horde(name = "Medium Test", difficulty = HordeDifficulty.MEDIUM, estimatedDuration = 30)
-        assertEquals(6.0, service.resolveEffectivePace(horde))
+        assertEquals(8.0, service.resolveEffectivePace(horde))
     }
 
     @Test
