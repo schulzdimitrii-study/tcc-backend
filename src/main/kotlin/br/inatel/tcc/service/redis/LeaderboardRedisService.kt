@@ -32,6 +32,8 @@ class LeaderboardRedisService(
     private fun goalDistanceKey(sessionId: String) = "session:$sessionId:goal:distance"
     private fun globalRankingKey(period: String) = "ranking:global:$period"
 
+    private val ACTIVE_SESSIONS_KEY = "sessions:active"
+
     fun initSession(
         sessionId: String,
         targetPaceMinPerKm: Double?,
@@ -42,6 +44,7 @@ class LeaderboardRedisService(
         if (redis.hasKey(startKey) != true) {
             val epochSeconds = System.currentTimeMillis() / 1000
             redis.opsForValue().set(startKey, epochSeconds.toString(), Duration.ofHours(24))
+            redis.opsForSet().add(ACTIVE_SESSIONS_KEY, sessionId)
 
             targetPaceMinPerKm?.let {
                 redis.opsForValue().set(hordeKey(sessionId), it.toString(), Duration.ofHours(24))
@@ -110,5 +113,9 @@ class LeaderboardRedisService(
         redis.expire(hordeKey(sessionId), ttl)
         redis.expire(hordeAdaptiveKey(sessionId), ttl)
         redis.expire(goalDistanceKey(sessionId), ttl)
+        redis.opsForSet().remove(ACTIVE_SESSIONS_KEY, sessionId)
     }
+
+    fun getActiveSessions(): Set<String> =
+        redis.opsForSet().members(ACTIVE_SESSIONS_KEY) ?: emptySet()
 }
