@@ -2,6 +2,7 @@ package br.inatel.tcc.service.redis
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -15,6 +16,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.data.redis.core.SetOperations
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.ValueOperations
 import org.springframework.data.redis.core.ZSetOperations
@@ -27,6 +29,7 @@ class LeaderboardRedisServiceTest {
     @Mock private lateinit var redis: StringRedisTemplate
     @Mock private lateinit var valueOps: ValueOperations<String, String>
     @Mock private lateinit var zSetOps: ZSetOperations<String, String>
+    @Mock private lateinit var setOps: SetOperations<String, String>
 
     private lateinit var service: LeaderboardRedisService
 
@@ -34,11 +37,13 @@ class LeaderboardRedisServiceTest {
     private val leaderboardKey = "session:$sessionId:leaderboard"
     private val startKey = "session:$sessionId:start"
     private val hordeKey = "session:$sessionId:horde:pace"
+    private val activeSessionsKey = "sessions:active"
 
     @BeforeEach
     fun setUp() {
         whenever(redis.opsForValue()).thenReturn(valueOps)
         whenever(redis.opsForZSet()).thenReturn(zSetOps)
+        whenever(redis.opsForSet()).thenReturn(setOps)
         service = LeaderboardRedisService(redis)
     }
 
@@ -52,6 +57,7 @@ class LeaderboardRedisServiceTest {
 
         verify(valueOps).set(eq(startKey), any(), eq(Duration.ofHours(24)))
         verify(valueOps).set(eq(hordeKey), eq("6.0"), eq(Duration.ofHours(24)))
+        verify(setOps).add(activeSessionsKey, sessionId)
     }
 
     @Test
@@ -61,6 +67,7 @@ class LeaderboardRedisServiceTest {
         service.initSession(sessionId, 6.0)
 
         verify(valueOps, never()).set(any(), any(), any<Duration>())
+        verify(setOps, never()).add(any(), any())
     }
 
     @Test
@@ -71,6 +78,7 @@ class LeaderboardRedisServiceTest {
 
         verify(valueOps).set(eq(startKey), any(), eq(Duration.ofHours(24)))
         verify(valueOps, never()).set(eq(hordeKey), any(), any<Duration>())
+        verify(setOps).add(activeSessionsKey, sessionId)
     }
 
     // ─── updateUserDistance ───────────────────────────────────────────────────
@@ -189,5 +197,32 @@ class LeaderboardRedisServiceTest {
         verify(redis).expire(hordeKey, Duration.ofHours(1))
         verify(redis).expire("session:$sessionId:horde:adaptive", Duration.ofHours(1))
         verify(redis).expire("session:$sessionId:goal:distance", Duration.ofHours(1))
+    }
+
+    @Test
+    fun shouldRemoveSessionFromActiveSet_whenExpiring() {
+        service.expireSessionKeys(sessionId)
+
+        verify(setOps).remove(activeSessionsKey, sessionId)
+    }
+
+    // ─── getActiveSessions ────────────────────────────────────────────────────
+
+    @Test
+    fun shouldReturnActiveSessions() {
+        whenever(setOps.members(activeSessionsKey)).thenReturn(setOf("session-1", "session-2"))
+
+        val result = service.getActiveSessions()
+
+        assertEquals(setOf("session-1", "session-2"), result)
+    }
+
+    @Test
+    fun shouldReturnEmptySet_whenNoActiveSessions() {
+        whenever(setOps.members(activeSessionsKey)).thenReturn(null)
+
+        val result = service.getActiveSessions()
+
+        assertTrue(result.isEmpty())
     }
 }
