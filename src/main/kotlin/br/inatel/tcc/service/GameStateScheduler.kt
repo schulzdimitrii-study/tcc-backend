@@ -58,10 +58,14 @@ class GameStateScheduler(
                 val distanceToGoal = if (goalDistance > 0.0) max(0.0, goalDistance - playerPosition) else 0.0
                 val distancePlayerToHorde = abs(playerPosition - hordePosition)
                 val raceProgress = if (goalDistance > 0.0) min(100.0, (playerPosition / goalDistance) * 100.0) else 0.0
+                val elapsedSeconds = System.currentTimeMillis() / 1000 - startEpoch
+                val isDelayActive = elapsedSeconds < hordePositionService.getStartDelaySeconds()
+
                 val gameStatus = when {
-                    hordePosition >= playerPosition                       -> GameStatus.CAUGHT
                     goalDistance > 0.0 && playerPosition >= goalDistance -> GameStatus.ESCAPED
-                    else                                                  -> GameStatus.RUNNING
+                    isDelayActive                                        -> GameStatus.RUNNING
+                    hordePosition >= playerPosition                      -> GameStatus.CAUGHT
+                    else                                                 -> GameStatus.RUNNING
                 }
 
                 messagingTemplate.convertAndSend(

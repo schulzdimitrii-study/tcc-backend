@@ -99,7 +99,7 @@ class BiometricWebSocketControllerTest {
         whenever(leaderboardRedisService.getTopEntries(sessionId, 10)).thenReturn(emptySet())
         whenever(leaderboardRedisService.getSessionStartEpoch(sessionId)).thenReturn(startEpoch)
         whenever(leaderboardRedisService.getHordePace(sessionId)).thenReturn(6.0)
-        whenever(hordePositionService.calculateVirtualPosition(startEpoch, 6.0)).thenReturn(1.666)
+        whenever(hordePositionService.calculateVirtualPosition(eq(startEpoch), eq(6.0), any())).thenReturn(1.666)
 
         val captor = argumentCaptor<LeaderboardResponse>()
         controller.receiveBiometricData(message)
@@ -135,7 +135,7 @@ class BiometricWebSocketControllerTest {
 
         verify(messagingTemplate).convertAndSend(any<String>(), captor.capture())
         assert(captor.firstValue.hordeVirtualDistanceKm == null)
-        verify(hordePositionService, never()).calculateVirtualPosition(any(), any())
+        verify(hordePositionService, never()).calculateVirtualPosition(any(), any(), any())
     }
 
     @Test
@@ -235,7 +235,7 @@ class BiometricWebSocketControllerTest {
         whenever(leaderboardRedisService.getGoalDistance(sessionId)).thenReturn(10.0)
         whenever(leaderboardRedisService.getSessionStartEpoch(sessionId)).thenReturn(1000L)
         whenever(leaderboardRedisService.getHordePace(sessionId)).thenReturn(6.0)
-        whenever(hordePositionService.calculateVirtualPosition(any(), any())).thenReturn(1.0)
+        whenever(hordePositionService.calculateVirtualPosition(any(), any(), any())).thenReturn(1.0)
 
         val captor = argumentCaptor<GameStateResponse>()
         controller.receiveBiometricData(message)
@@ -262,7 +262,7 @@ class BiometricWebSocketControllerTest {
         whenever(leaderboardRedisService.getGoalDistance(sessionId)).thenReturn(10.0)
         whenever(leaderboardRedisService.getSessionStartEpoch(sessionId)).thenReturn(1000L)
         whenever(leaderboardRedisService.getHordePace(sessionId)).thenReturn(6.0)
-        whenever(hordePositionService.calculateVirtualPosition(any(), any())).thenReturn(1.5)
+        whenever(hordePositionService.calculateVirtualPosition(any(), any(), any())).thenReturn(1.5)
 
         val captor = argumentCaptor<GameStateResponse>()
         controller.receiveBiometricData(message)
@@ -282,7 +282,7 @@ class BiometricWebSocketControllerTest {
         whenever(leaderboardRedisService.getGoalDistance(sessionId)).thenReturn(10.0)
         whenever(leaderboardRedisService.getSessionStartEpoch(sessionId)).thenReturn(1000L)
         whenever(leaderboardRedisService.getHordePace(sessionId)).thenReturn(6.0)
-        whenever(hordePositionService.calculateVirtualPosition(any(), any())).thenReturn(5.0)
+        whenever(hordePositionService.calculateVirtualPosition(any(), any(), any())).thenReturn(5.0)
 
         val captor = argumentCaptor<GameStateResponse>()
         controller.receiveBiometricData(message)

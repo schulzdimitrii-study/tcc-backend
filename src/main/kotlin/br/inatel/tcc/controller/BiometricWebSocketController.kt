@@ -93,11 +93,29 @@ class BiometricWebSocketController(
 
         val startEpoch = leaderboardRedisService.getSessionStartEpoch(message.sessionId)
         val hordePace = leaderboardRedisService.getHordePace(message.sessionId)
+        val currentEpoch = System.currentTimeMillis() / 1000
+        val hordeElapsedSeconds = startEpoch?.let { currentEpoch - it }
+        val hordeDelayRemainingSeconds = hordeElapsedSeconds
+            ?.let { hordePositionService.getStartDelaySeconds() - it }
+            ?.coerceAtLeast(0)
         val hordeVirtualDistance = if (startEpoch != null && hordePace != null && hordePace > 0) {
-            hordePositionService.calculateVirtualPosition(startEpoch, hordePace)
+            hordePositionService.calculateVirtualPosition(startEpoch, hordePace, currentEpoch)
         } else {
             null
         }
+
+        log.info(
+            "[HORDE_DELAY] sessionId={} userId={} startEpoch={} currentEpoch={} elapsedSeconds={} delayRemainingSeconds={} hordePace={} hordeDistanceKm={} playerDistanceKm={}",
+            message.sessionId,
+            message.userId,
+            startEpoch,
+            currentEpoch,
+            hordeElapsedSeconds,
+            hordeDelayRemainingSeconds,
+            hordePace,
+            hordeVirtualDistance,
+            message.accumulatedDistance
+        )
 
         val isBehindHorde = hordeVirtualDistance?.let { message.accumulatedDistance < it }
         val distanceToHorde = hordeVirtualDistance?.let { it - message.accumulatedDistance }
@@ -121,13 +139,29 @@ class BiometricWebSocketController(
         val hordeSpeed = if (hordePace != null && hordePace > 0.0) 60.0 / hordePace else 0.0
         val raceProgress = if (goalDistance > 0.0) kotlin.math.min(100.0, (playerPosition / goalDistance) * 100.0) else 0.0
 
-        val gameStatus = if (hordeVirtualDistance != null && hordeVirtualDistance >= playerPosition) {
-            GameStatus.CAUGHT
-        } else if (goalDistance > 0.0 && playerPosition >= goalDistance) {
+        val isDelayActive = hordeElapsedSeconds != null && hordeElapsedSeconds < hordePositionService.getStartDelaySeconds()
+
+        val gameStatus = if (goalDistance > 0.0 && playerPosition >= goalDistance) {
             GameStatus.ESCAPED
+        } else if (isDelayActive) {
+            GameStatus.RUNNING
+        } else if (hordeVirtualDistance != null && hordeVirtualDistance >= playerPosition) {
+            GameStatus.CAUGHT
         } else {
             GameStatus.RUNNING
         }
+
+        log.info(
+            "[HORDE_STATUS] sessionId={} userId={} playerPositionKm={} hordePositionKm={} distancePlayerToHordeKm={} goalDistanceKm={} raceProgress={} status={}",
+            message.sessionId,
+            message.userId,
+            playerPosition,
+            hordePosition,
+            distancePlayerToHorde,
+            goalDistance,
+            raceProgress,
+            gameStatus
+        )
 
         val gameStateResponse = GameStateResponse(
             sessionId = message.sessionId,
