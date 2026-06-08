@@ -41,6 +41,6 @@ class HordePositionService {
     }
 
     private companion object {
-        const val HORDE_START_DELAY_SECONDS = 5L
+        const val HORDE_START_DELAY_SECONDS = 7L
     }
 }

@@ -27,9 +27,9 @@ class HordePositionServiceTest {
     }
 
     @Test
-    fun shouldKeepHordeStoppedBeforeFiveSecondDelay() {
+    fun shouldKeepHordeStoppedBeforeSevenSecondDelay() {
         val currentEpoch = 1_000L
-        val startEpoch = currentEpoch - 4
+        val startEpoch = currentEpoch - 6
 
         val result = service.calculateVirtualPosition(startEpoch, 6.0, currentEpoch)
 
@@ -37,9 +37,9 @@ class HordePositionServiceTest {
     }
 
     @Test
-    fun shouldStartHordeAfterFiveSecondDelay() {
+    fun shouldStartHordeAfterSevenSecondDelay() {
         val currentEpoch = 1_000L
-        val startEpoch = currentEpoch - 65
+        val startEpoch = currentEpoch - 67
 
         val result = service.calculateVirtualPosition(startEpoch, 6.0, currentEpoch)
 
