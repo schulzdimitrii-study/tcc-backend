@@ -71,7 +71,7 @@ class TrainSessionServiceTest {
         val response = service.startSession("test@example.com", StartSessionRequest(trainType = "RUN"))
 
         assertNotNull(response.sessionId)
-        verify(leaderboardRedisService).initSession(sessionId.toString(), null, false, null)
+        verify(leaderboardRedisService).initSession(sessionId.toString(), null, false, null, null)
     }
  
     @Test
@@ -90,7 +90,18 @@ class TrainSessionServiceTest {
         val response = service.startSession("test@example.com", StartSessionRequest(hordeId = hordeId))
  
         assertNotNull(response.sessionId)
-        verify(leaderboardRedisService).initSession(sessionId.toString(), 6.0, false, 60)
+        verify(leaderboardRedisService).initSession(sessionId.toString(), 6.0, false, 60, null)
+    }
+
+    @Test
+    fun shouldPassExplicitGoalDistanceKm_whenProvidedInRequest() {
+        val savedSession = buildSession()
+        whenever(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(buildUser()))
+        whenever(trainSessionRepository.save(any())).thenReturn(savedSession)
+
+        service.startSession("test@example.com", StartSessionRequest(trainType = "RUN", goalDistanceKm = 5.0))
+
+        verify(leaderboardRedisService).initSession(sessionId.toString(), null, false, null, 5.0)
     }
  
     @Test
@@ -107,7 +118,7 @@ class TrainSessionServiceTest {
  
         service.startSession("test@example.com", StartSessionRequest(hordeId = subHordeId))
  
-        verify(leaderboardRedisService).initSession(sessionId.toString(), 5.0, false, 30)
+        verify(leaderboardRedisService).initSession(sessionId.toString(), 5.0, false, 30, null)
     }
 
     @Test

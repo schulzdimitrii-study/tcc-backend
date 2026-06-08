@@ -81,7 +81,8 @@ class TrainSessionService(
             sessionId,
             horde?.let { hordePositionService.resolveEffectivePace(it) },
             horde?.isAdaptive ?: false,
-            horde?.estimatedDuration
+            horde?.estimatedDuration,
+            request.goalDistanceKm
         )
 
         return StartSessionResponse(sessionId = sessionId)

@@ -38,7 +38,8 @@ class LeaderboardRedisService(
         sessionId: String,
         targetPaceMinPerKm: Double?,
         isAdaptive: Boolean = false,
-        estimatedDurationMin: Int? = null
+        estimatedDurationMin: Int? = null,
+        goalDistanceKm: Double? = null
     ) {
         val startKey = startKey(sessionId)
         if (redis.hasKey(startKey) != true) {
@@ -54,9 +55,16 @@ class LeaderboardRedisService(
                 redis.opsForValue().set(hordeAdaptiveKey(sessionId), "true", Duration.ofHours(24))
             }
 
-            if (targetPaceMinPerKm != null && targetPaceMinPerKm > 0 && estimatedDurationMin != null) {
-                val goalDistance = estimatedDurationMin.toDouble() / targetPaceMinPerKm
-                redis.opsForValue().set(goalDistanceKey(sessionId), goalDistance.toString(), Duration.ofHours(24))
+            val goalDistance = goalDistanceKm
+                ?.takeIf { it > 0.0 }
+                ?: if (targetPaceMinPerKm != null && targetPaceMinPerKm > 0 && estimatedDurationMin != null) {
+                    estimatedDurationMin.toDouble() / targetPaceMinPerKm
+                } else {
+                    null
+                }
+
+            goalDistance?.let {
+                redis.opsForValue().set(goalDistanceKey(sessionId), it.toString(), Duration.ofHours(24))
             }
         }
     }
