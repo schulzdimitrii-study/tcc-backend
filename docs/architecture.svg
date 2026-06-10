@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 820" font-family="'Segoe UI', Roboto, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f0c29"/>
+      <stop offset="50%" stop-color="#302b63"/>
+      <stop offset="100%" stop-color="#24243e"/>
+    </linearGradient>
+    <linearGradient id="clientGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+    <linearGradient id="secGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f093fb"/>
+      <stop offset="100%" stop-color="#f5576c"/>
+    </linearGradient>
+    <linearGradient id="ctrlGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#4facfe"/>
+      <stop offset="100%" stop-color="#00f2fe"/>
+    </linearGradient>
+    <linearGradient id="svcGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#43e97b"/>
+      <stop offset="100%" stop-color="#38f9d7"/>
+    </linearGradient>
+    <linearGradient id="repoGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fa709a"/>
+      <stop offset="100%" stop-color="#fee140"/>
+    </linearGradient>
+    <linearGradient id="dbGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#336791"/>
+      <stop offset="100%" stop-color="#5ba4e5"/>
+    </linearGradient>
+    <linearGradient id="redisGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#dc382d"/>
+      <stop offset="100%" stop-color="#ff6b6b"/>
+    </linearGradient>
+    <linearGradient id="ciGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#d44d2c"/>
+      <stop offset="100%" stop-color="#ef8c3b"/>
+    </linearGradient>
+    <linearGradient id="cloudGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0069ff"/>
+      <stop offset="100%" stop-color="#68b8fc"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="820" rx="16" fill="url(#bgGrad)"/>
+
+  <!-- Title -->
+  <text x="480" y="38" text-anchor="middle" fill="#fff" font-size="20" font-weight="700" letter-spacing="1">🏃 Bio Survival — Architecture Overview</text>
+
+  <!-- ======== CLIENT ======== -->
+  <rect x="340" y="56" width="280" height="52" rx="12" fill="url(#clientGrad)" filter="url(#shadow)"/>
+  <text x="480" y="78" text-anchor="middle" fill="#fff" font-size="11" font-weight="600" opacity="0.85">📱 CLIENT</text>
+  <text x="480" y="95" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Wear OS / Android App</text>
+
+  <!-- Arrow Client → Security -->
+  <line x1="480" y1="108" x2="480" y2="128" stroke="#f5576c" stroke-width="2" marker-end="url(#arrowPink)"/>
+  <text x="500" y="122" fill="#ccc" font-size="9">HTTP / WS</text>
+
+  <!-- ==================== SPRING BOOT BOX ==================== -->
+  <rect x="40" y="130" width="880" height="460" rx="14" fill="none" stroke="#5c6bc0" stroke-width="1.5" stroke-dasharray="8,4" opacity="0.6"/>
+  <text x="60" y="152" fill="#9fa8da" font-size="11" font-weight="600">☕ Spring Boot 3.4 — Kotlin 2.1</text>
+
+  <!-- ── Security Layer ── -->
+  <rect x="80" y="166" width="800" height="52" rx="10" fill="url(#secGrad)" fill-opacity="0.15" stroke="url(#secGrad)" stroke-width="1"/>
+  <text x="480" y="185" text-anchor="middle" fill="#f5576c" font-size="11" font-weight="600">🔐 SECURITY LAYER</text>
+  <text x="480" y="204" text-anchor="middle" fill="#ddd" font-size="11">JwtAuthFilter  ·  SecurityConfig  ·  BCrypt  ·  CORS</text>
+
+  <!-- Arrow Security → Controllers -->
+  <line x1="480" y1="218" x2="480" y2="238" stroke="#4facfe" stroke-width="2"/>
+
+  <!-- ── Controller Layer ── -->
+  <rect x="80" y="240" width="800" height="72" rx="10" fill="url(#ctrlGrad)" fill-opacity="0.12" stroke="url(#ctrlGrad)" stroke-width="1"/>
+  <text x="480" y="260" text-anchor="middle" fill="#4facfe" font-size="11" font-weight="600">🎮 CONTROLLER LAYER</text>
+
+  <!-- Controller boxes -->
+  <rect x="100" y="270" width="140" height="32" rx="6" fill="#4facfe" fill-opacity="0.2" stroke="#4facfe" stroke-width="0.8"/>
+  <text x="170" y="290" text-anchor="middle" fill="#e0f7fa" font-size="10">AuthController</text>
+
+  <rect x="260" y="270" width="140" height="32" rx="6" fill="#4facfe" fill-opacity="0.2" stroke="#4facfe" stroke-width="0.8"/>
+  <text x="330" y="290" text-anchor="middle" fill="#e0f7fa" font-size="10">UserController</text>
+
+  <rect x="420" y="270" width="160" height="32" rx="6" fill="#4facfe" fill-opacity="0.2" stroke="#4facfe" stroke-width="0.8"/>
+  <text x="500" y="290" text-anchor="middle" fill="#e0f7fa" font-size="10">TrainSessionController</text>
+
+  <rect x="600" y="270" width="140" height="32" rx="6" fill="#4facfe" fill-opacity="0.2" stroke="#4facfe" stroke-width="0.8"/>
+  <text x="670" y="290" text-anchor="middle" fill="#e0f7fa" font-size="10">RankingController</text>
+
+  <rect x="760" y="270" width="100" height="32" rx="6" fill="#00bcd4" fill-opacity="0.25" stroke="#00bcd4" stroke-width="0.8"/>
+  <text x="810" y="290" text-anchor="middle" fill="#b2ebf2" font-size="10">WebSocket</text>
+
+  <!-- Arrow Controller → Service -->
+  <line x1="480" y1="312" x2="480" y2="338" stroke="#43e97b" stroke-width="2"/>
+
+  <!-- ── Service Layer ── -->
+  <rect x="80" y="340" width="800" height="100" rx="10" fill="url(#svcGrad)" fill-opacity="0.10" stroke="url(#svcGrad)" stroke-width="1"/>
+  <text x="480" y="360" text-anchor="middle" fill="#43e97b" font-size="11" font-weight="600">⚙️ SERVICE LAYER</text>
+
+  <!-- Service boxes — row 1 -->
+  <rect x="100" y="370" width="120" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="160" y="388" text-anchor="middle" fill="#c8e6c9" font-size="9.5">AuthService</text>
+
+  <rect x="235" y="370" width="120" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="295" y="388" text-anchor="middle" fill="#c8e6c9" font-size="9.5">JwtService</text>
+
+  <rect x="370" y="370" width="120" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="430" y="388" text-anchor="middle" fill="#c8e6c9" font-size="9.5">UserService</text>
+
+  <rect x="505" y="370" width="140" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="575" y="388" text-anchor="middle" fill="#c8e6c9" font-size="9.5">TrainSessionService</text>
+
+  <rect x="660" y="370" width="120" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="720" y="388" text-anchor="middle" fill="#c8e6c9" font-size="9.5">RankingService</text>
+
+  <!-- Service boxes — row 2 -->
+  <rect x="100" y="406" width="140" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="170" y="424" text-anchor="middle" fill="#c8e6c9" font-size="9.5">AchievementService</text>
+
+  <rect x="255" y="406" width="160" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="335" y="424" text-anchor="middle" fill="#c8e6c9" font-size="9.5">BiometricPersistenceService</text>
+
+  <rect x="430" y="406" width="140" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="500" y="424" text-anchor="middle" fill="#c8e6c9" font-size="9.5">CardiacZoneService</text>
+
+  <rect x="585" y="406" width="160" height="28" rx="5" fill="#43e97b" fill-opacity="0.18" stroke="#43e97b" stroke-width="0.7"/>
+  <text x="665" y="424" text-anchor="middle" fill="#c8e6c9" font-size="9.5">HordePositionService</text>
+
+  <rect x="760" y="406" width="105" height="28" rx="5" fill="#ffd54f" fill-opacity="0.15" stroke="#ffd54f" stroke-width="0.7"/>
+  <text x="812" y="424" text-anchor="middle" fill="#fff9c4" font-size="9.5">Scheduler</text>
+
+  <!-- Arrow Service → Repository / Redis -->
+  <line x1="380" y1="440" x2="380" y2="468" stroke="#fa709a" stroke-width="2"/>
+  <line x1="620" y1="440" x2="620" y2="468" stroke="#ff6b6b" stroke-width="2"/>
+
+  <!-- ── Repository / Cache Layer ── -->
+  <rect x="80" y="470" width="440" height="56" rx="10" fill="url(#repoGrad)" fill-opacity="0.10" stroke="url(#repoGrad)" stroke-width="1"/>
+  <text x="300" y="490" text-anchor="middle" fill="#fa709a" font-size="11" font-weight="600">📦 REPOSITORY LAYER (Spring Data JPA)</text>
+  <text x="300" y="514" text-anchor="middle" fill="#ddd" font-size="10">UserRepository  ·  TrainSessionRepository  ·  AchievementRepository  ·  …</text>
+
+  <rect x="545" y="470" width="335" height="56" rx="10" fill="url(#redisGrad)" fill-opacity="0.10" stroke="url(#redisGrad)" stroke-width="1"/>
+  <text x="712" y="490" text-anchor="middle" fill="#ff6b6b" font-size="11" font-weight="600">⚡ REDIS CACHE LAYER</text>
+  <text x="712" y="514" text-anchor="middle" fill="#ddd" font-size="10">SessionRedisService  ·  LeaderboardRedisService</text>
+
+  <!-- Arrow Repo → DB, Redis → Redis instance -->
+  <line x1="300" y1="526" x2="300" y2="558" stroke="#5ba4e5" stroke-width="2"/>
+  <line x1="712" y1="526" x2="712" y2="558" stroke="#ff6b6b" stroke-width="2"/>
+
+  <!-- Config / Cross-cutting note -->
+  <rect x="80" y="536" width="800" height="20" rx="4" fill="none"/>
+  <text x="480" y="550" text-anchor="middle" fill="#9e9e9e" font-size="9" font-style="italic">Flyway Migrations · Swagger/OpenAPI · GlobalExceptionHandler · WebSocketConfig</text>
+
+  <!-- ==================== INFRASTRUCTURE ==================== -->
+  <!-- PostgreSQL -->
+  <rect x="145" y="564" width="310" height="56" rx="12" fill="url(#dbGrad)" filter="url(#shadow)"/>
+  <text x="300" y="586" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">🐘 PostgreSQL 17</text>
+  <text x="300" y="604" text-anchor="middle" fill="#bbdefb" font-size="10">Flyway Migrations · Persistent Storage</text>
+
+  <!-- Redis -->
+  <rect x="520" y="564" width="310" height="56" rx="12" fill="url(#redisGrad)" filter="url(#shadow)"/>
+  <text x="675" y="586" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">⚡ Redis 7</text>
+  <text x="675" y="604" text-anchor="middle" fill="#ffcdd2" font-size="10">Leaderboards · Session Cache</text>
+
+  <!-- ==================== CI/CD PIPELINE ==================== -->
+  <rect x="40" y="650" width="880" height="56" rx="10" fill="url(#ciGrad)" fill-opacity="0.12" stroke="url(#ciGrad)" stroke-width="1"/>
+  <text x="480" y="672" text-anchor="middle" fill="#ef8c3b" font-size="11" font-weight="600">🔄 CI/CD PIPELINE</text>
+
+  <rect x="60" y="680" width="130" height="20" rx="4" fill="#ef8c3b" fill-opacity="0.2" stroke="#ef8c3b" stroke-width="0.6"/>
+  <text x="125" y="694" text-anchor="middle" fill="#ffe0b2" font-size="9">Jenkins</text>
+
+  <text x="210" y="694" fill="#9e9e9e" font-size="10">→</text>
+
+  <rect x="230" y="680" width="100" height="20" rx="4" fill="#ef8c3b" fill-opacity="0.2" stroke="#ef8c3b" stroke-width="0.6"/>
+  <text x="280" y="694" text-anchor="middle" fill="#ffe0b2" font-size="9">Build (Maven)</text>
+
+  <text x="345" y="694" fill="#9e9e9e" font-size="10">→</text>
+
+  <rect x="360" y="680" width="130" height="20" rx="4" fill="#ef8c3b" fill-opacity="0.2" stroke="#ef8c3b" stroke-width="0.6"/>
+  <text x="425" y="694" text-anchor="middle" fill="#ffe0b2" font-size="9">Tests + JaCoCo</text>
+
+  <text x="505" y="694" fill="#9e9e9e" font-size="10">→</text>
+
+  <rect x="520" y="680" width="130" height="20" rx="4" fill="#ef8c3b" fill-opacity="0.2" stroke="#ef8c3b" stroke-width="0.6"/>
+  <text x="585" y="694" text-anchor="middle" fill="#ffe0b2" font-size="9">Docker Build</text>
+
+  <text x="665" y="694" fill="#9e9e9e" font-size="10">→</text>
+
+  <rect x="680" y="680" width="130" height="20" rx="4" fill="#ef8c3b" fill-opacity="0.2" stroke="#ef8c3b" stroke-width="0.6"/>
+  <text x="745" y="694" text-anchor="middle" fill="#ffe0b2" font-size="9">Deploy (SCP+SSH)</text>
+
+  <text x="825" y="694" fill="#9e9e9e" font-size="10">→</text>
+
+  <rect x="840" y="680" width="68" height="20" rx="4" fill="#ef8c3b" fill-opacity="0.2" stroke="#ef8c3b" stroke-width="0.6"/>
+  <text x="874" y="694" text-anchor="middle" fill="#ffe0b2" font-size="9">Email ✉️</text>
+
+  <!-- ==================== HOSTING ==================== -->
+  <rect x="80" y="730" width="320" height="56" rx="12" fill="url(#cloudGrad)" filter="url(#shadow)"/>
+  <text x="240" y="752" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">☁️ DigitalOcean Droplet</text>
+  <text x="240" y="770" text-anchor="middle" fill="#bbdefb" font-size="10">Docker Compose · Production Host</text>
+
+  <rect x="460" y="730" width="200" height="56" rx="12" fill="#1a8c1a" fill-opacity="0.7" filter="url(#shadow)"/>
+  <text x="560" y="752" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">🌐 Ngrok</text>
+  <text x="560" y="770" text-anchor="middle" fill="#c8e6c9" font-size="10">Webhook Tunnel (Jenkins)</text>
+
+  <rect x="720" y="730" width="200" height="56" rx="12" fill="#333" filter="url(#shadow)"/>
+  <text x="820" y="752" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">🐙 GitHub</text>
+  <text x="820" y="770" text-anchor="middle" fill="#bbb" font-size="10">Source Control · Webhooks</text>
+
+  <!-- Connection lines CI → infra -->
+  <line x1="240" y1="706" x2="240" y2="730" stroke="#0069ff" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="560" y1="706" x2="560" y2="730" stroke="#1a8c1a" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="820" y1="706" x2="820" y2="730" stroke="#777" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- Footer -->
+  <text x="480" y="808" text-anchor="middle" fill="#666" font-size="9">Bio Survival — TCC Inatel © 2026 · Dimitri, José, Pedro Augusto, Pedro Bressan</text>
+</svg>
