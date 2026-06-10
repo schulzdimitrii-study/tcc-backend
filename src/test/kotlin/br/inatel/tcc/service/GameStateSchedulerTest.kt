@@ -172,6 +172,24 @@ class GameStateSchedulerTest {
     }
 
     @Test
+    fun shouldPublishRunningStatus_whenHordePositionIsAheadButDelayIsActive() {
+        val currentSec = System.currentTimeMillis() / 1000
+        whenever(hordePositionService.getStartDelaySeconds()).thenReturn(7L)
+        setupSession(
+            playerPosition = 0.0,
+            hordePosition = 0.0,
+            goalDistance = 10.0,
+            startEpoch = currentSec - 3
+        )
+
+        val captor = argumentCaptor<GameStateResponse>()
+        scheduler.broadcastHordeGameState()
+
+        verify(messagingTemplate).convertAndSend(any<String>(), captor.capture())
+        assertEquals(GameStatus.RUNNING, captor.firstValue.gameStatus)
+    }
+
+    @Test
     fun shouldPublishEscapedStatus_whenPlayerReachesGoal() {
         setupSession(playerPosition = 10.5, hordePosition = 5.0, goalDistance = 10.0)
 

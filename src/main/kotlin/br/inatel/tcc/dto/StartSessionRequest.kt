@@ -11,5 +11,6 @@ import java.util.UUID
  */
 data class StartSessionRequest(
     val hordeId: UUID? = null,
-    val trainType: String = "RUN"
+    val trainType: String = "RUN",
+    val goalDistanceKm: Double? = null
 )
