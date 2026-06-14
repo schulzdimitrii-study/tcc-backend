@@ -17,7 +17,8 @@ class GameStateResponseTest {
             playerSpeed = 5.5,
             hordeSpeed = 4.8,
             raceProgress = 20.0,
-            gameStatus = GameStatus.RUNNING
+            gameStatus = GameStatus.RUNNING,
+            serverTimestampMs = 1717970400000L
         )
 
         assertEquals("session-abc", response.sessionId)
@@ -30,5 +31,6 @@ class GameStateResponseTest {
         assertEquals(4.8, response.hordeSpeed)
         assertEquals(20.0, response.raceProgress)
         assertEquals(GameStatus.RUNNING, response.gameStatus)
+        assertEquals(1717970400000L, response.serverTimestampMs)
     }
 }

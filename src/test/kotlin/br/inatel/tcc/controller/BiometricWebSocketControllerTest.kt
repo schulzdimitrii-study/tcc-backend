@@ -52,7 +52,9 @@ class BiometricWebSocketControllerTest {
         distance: Double = 2.5,
         bpm: Int = 155,
         sessionId: String = this.sessionId,
-        userId: String = this.userId
+        userId: String = this.userId,
+        latencyTraceId: String? = null,
+        clientSentAtElapsedMs: Long? = null
     ) = BiometricDataMessage(
         sessionId = sessionId,
         userId = userId,
@@ -62,7 +64,9 @@ class BiometricWebSocketControllerTest {
         speed = 10.0,
         pace = 6.0,
         accumulatedDistance = distance,
-        accumulatedCalories = 120.0
+        accumulatedCalories = 120.0,
+        latencyTraceId = latencyTraceId,
+        clientSentAtElapsedMs = clientSentAtElapsedMs
     )
 
     // ─── receiveBiometricData ─────────────────────────────────────────────────
@@ -253,6 +257,32 @@ class BiometricWebSocketControllerTest {
         org.junit.jupiter.api.Assertions.assertEquals(10.0, state.hordeSpeed)
         org.junit.jupiter.api.Assertions.assertEquals(20.0, state.raceProgress)
         org.junit.jupiter.api.Assertions.assertEquals(GameStatus.RUNNING, state.gameStatus)
+        org.junit.jupiter.api.Assertions.assertTrue(state.serverTimestampMs > 0L)
+    }
+
+    @Test
+    fun shouldEchoLatencyMetadataInGameState() {
+        val message = buildMessage(
+            distance = 2.0,
+            latencyTraceId = "trace-123",
+            clientSentAtElapsedMs = 45_000L
+        )
+        setupLeaderboardMocks(rank = 0L)
+        whenever(leaderboardRedisService.getGoalDistance(sessionId)).thenReturn(10.0)
+
+        val captor = argumentCaptor<GameStateResponse>()
+        controller.receiveBiometricData(message)
+
+        verify(messagingTemplate).convertAndSend(
+            eq("/topic/session/$sessionId/game-state"),
+            captor.capture()
+        )
+        val state = captor.firstValue
+        org.junit.jupiter.api.Assertions.assertEquals("trace-123", state.latencyTraceId)
+        org.junit.jupiter.api.Assertions.assertEquals(45_000L, state.clientSentAtElapsedMs)
+        org.junit.jupiter.api.Assertions.assertNotNull(state.backendProcessingMs)
+        org.junit.jupiter.api.Assertions.assertTrue(state.backendProcessingMs!! >= 0L)
+        org.junit.jupiter.api.Assertions.assertTrue(state.serverTimestampMs > 0L)
     }
 
     @Test

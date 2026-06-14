@@ -16,5 +16,9 @@ data class GameStateResponse(
     val playerSpeed: Double,
     val hordeSpeed: Double,
     val raceProgress: Double,
-    val gameStatus: GameStatus
+    val gameStatus: GameStatus,
+    val latencyTraceId: String? = null,
+    val clientSentAtElapsedMs: Long? = null,
+    val backendProcessingMs: Long? = null,
+    val serverTimestampMs: Long = System.currentTimeMillis()
 )
