@@ -20,5 +20,7 @@ data class BiometricDataMessage(
     @field:PositiveOrZero val speed: Double,       // Velocidade em km/h
     @field:PositiveOrZero val pace: Double,        // Ritmo em min/km
     @field:PositiveOrZero val accumulatedDistance: Double, // Distância total percorrida na sessão em km
-    @field:PositiveOrZero val accumulatedCalories: Double  // Calorias estimadas acumuladas
+    @field:PositiveOrZero val accumulatedCalories: Double, // Calorias estimadas acumuladas
+    val latencyTraceId: String? = null,
+    val clientSentAtElapsedMs: Long? = null
 )

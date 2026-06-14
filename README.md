@@ -331,11 +331,14 @@ ws://host:8080/ws
   "playerSpeed": 10.2,
   "hordeSpeed": 8.5,
   "raceProgress": 47.0,
-  "gameStatus": "RUNNING"
+  "gameStatus": "RUNNING",
+  "serverTimestampMs": 1717970400000
 }
 ```
 
 > **Game Status:** `RUNNING` | `CAUGHT` (horde alcançou o jogador) | `ESCAPED` (jogador completou a meta)
+>
+> **Unidades do Game State:** `playerPosition`, `hordePosition`, `distanceToGoal` e `distancePlayerToHorde` usam quilometros; `playerSpeed` e `hordeSpeed` usam km/h; `raceProgress` e percentual no intervalo `0.0..100.0`; `serverTimestampMs` usa epoch ms gerado pelo backend.
 
 ---
 

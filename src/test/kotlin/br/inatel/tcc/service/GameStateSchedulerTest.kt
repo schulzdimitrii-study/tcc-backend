@@ -112,6 +112,7 @@ class GameStateSchedulerTest {
         assertEquals(10.0, state.hordeSpeed)            // 60.0 / 6.0
         assertEquals(20.0, state.raceProgress)          // (2.0 / 10.0) * 100
         assertEquals(GameStatus.RUNNING, state.gameStatus)
+        org.junit.jupiter.api.Assertions.assertTrue(state.serverTimestampMs > 0L)
     }
 
     @Test

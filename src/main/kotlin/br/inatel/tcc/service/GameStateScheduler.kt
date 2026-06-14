@@ -10,7 +10,6 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Publica o game-state de cada sessão ativa com horda a cada 1 segundo.
@@ -57,7 +56,7 @@ class GameStateScheduler(
 
                 val distanceToGoal = if (goalDistance > 0.0) max(0.0, goalDistance - playerPosition) else 0.0
                 val distancePlayerToHorde = abs(playerPosition - hordePosition)
-                val raceProgress = if (goalDistance > 0.0) min(100.0, (playerPosition / goalDistance) * 100.0) else 0.0
+                val raceProgress = calculateRaceProgressPercent(playerPosition, goalDistance)
                 val elapsedSeconds = System.currentTimeMillis() / 1000 - startEpoch
                 val isDelayActive = elapsedSeconds < hordePositionService.getStartDelaySeconds()
 
@@ -80,7 +79,8 @@ class GameStateScheduler(
                         playerSpeed = playerSpeed,
                         hordeSpeed = hordeSpeed,
                         raceProgress = raceProgress,
-                        gameStatus = gameStatus
+                        gameStatus = gameStatus,
+                        serverTimestampMs = System.currentTimeMillis()
                     )
                 )
             }

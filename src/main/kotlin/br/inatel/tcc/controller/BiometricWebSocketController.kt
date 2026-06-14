@@ -8,6 +8,7 @@ import br.inatel.tcc.dto.GameStatus
 import br.inatel.tcc.service.BiometricPersistenceService
 import br.inatel.tcc.service.CardiacZoneService
 import br.inatel.tcc.service.HordePositionService
+import br.inatel.tcc.service.calculateRaceProgressPercent
 import br.inatel.tcc.service.redis.LeaderboardRedisService
 import br.inatel.tcc.service.redis.SessionRedisService
 import jakarta.validation.Validator
@@ -54,7 +55,7 @@ class BiometricWebSocketController(
             return
         }
 
-        val start = System.currentTimeMillis()
+        val startNs = System.nanoTime()
 
         // Persiste no PostgreSQL de forma assíncrona — não bloqueia o handler
         biometricPersistenceService.persistAsync(message)
@@ -137,7 +138,7 @@ class BiometricWebSocketController(
         val distancePlayerToHorde = kotlin.math.abs(playerPosition - hordePosition)
         val playerSpeed = message.speed
         val hordeSpeed = if (hordePace != null && hordePace > 0.0) 60.0 / hordePace else 0.0
-        val raceProgress = if (goalDistance > 0.0) kotlin.math.min(100.0, (playerPosition / goalDistance) * 100.0) else 0.0
+        val raceProgress = calculateRaceProgressPercent(playerPosition, goalDistance)
 
         val isDelayActive = hordeElapsedSeconds != null && hordeElapsedSeconds < hordePositionService.getStartDelaySeconds()
 
@@ -163,6 +164,8 @@ class BiometricWebSocketController(
             gameStatus
         )
 
+        val backendProcessingMs = ((System.nanoTime() - startNs) / 1_000_000).coerceAtLeast(0)
+
         val gameStateResponse = GameStateResponse(
             sessionId = message.sessionId,
             userId = message.userId,
@@ -173,15 +176,25 @@ class BiometricWebSocketController(
             playerSpeed = playerSpeed,
             hordeSpeed = hordeSpeed,
             raceProgress = raceProgress,
-            gameStatus = gameStatus
+            gameStatus = gameStatus,
+            latencyTraceId = message.latencyTraceId,
+            clientSentAtElapsedMs = message.clientSentAtElapsedMs,
+            backendProcessingMs = backendProcessingMs,
+            serverTimestampMs = System.currentTimeMillis()
         )
         messagingTemplate.convertAndSend("/topic/session/${message.sessionId}/game-state", gameStateResponse)
 
-        val elapsed = System.currentTimeMillis() - start
         log.info(
             "[BIOMETRIA] sessionId={} userId={} bpm={} zone={} distance={}km rank={} horde={}km redis={}ms",
             message.sessionId, message.userId, message.bpm, zone,
-            message.accumulatedDistance, userRank, hordeVirtualDistance, elapsed
+            message.accumulatedDistance, userRank, hordeVirtualDistance, backendProcessingMs
+        )
+        log.info(
+            "[LATENCY_BACKEND] sessionId={} userId={} traceId={} backendProcessingMs={}",
+            message.sessionId,
+            message.userId,
+            message.latencyTraceId,
+            backendProcessingMs
         )
     }
 }
